@@ -551,32 +551,29 @@ void PreParseInitialEntities(std::string filePath, std::vector<std::string>& ueL
 // ===========================================================================
 // 4. MAIN
 // ===========================================================================
-
 int main(int argc, char *argv[]) {
-
-    // --- DYNAMIC DETECTION OF UEs and GNBs ---
+    // --- 1. DYNAMIC DETECTION OF UEs and GNBs (Ditto/RAM Buffer) ---
     std::vector<std::string> discoveredUes;
     std::vector<std::string> discoveredGnbs;
     
-    // Path to the shared RAM buffer or your config file
     std::string configPath = "/dev/shm/ditto_buffer.json"; 
     PreParseInitialEntities(configPath, discoveredUes, discoveredGnbs);
 
-    // Fallback if the file is empty or not found
+    // Fallback par défaut
     if (discoveredUes.empty()) discoveredUes.push_back("my5GNetwork:ue0");
     if (discoveredGnbs.empty()) discoveredGnbs.push_back("my5GNetwork:gnb");
 
     uint32_t nUes = discoveredUes.size();
     uint32_t nGnbs = discoveredGnbs.size();
 
-    // --- A. NODES (DYNAMIC) ---
+    // --- 2. NODE CREATION ---
     NodeContainer tapNodes, gnbNodes, ueNodes, remoteHost;
     tapNodes.Create(2); 
     gnbNodes.Create(nGnbs); 
     ueNodes.Create(nUes); 
     remoteHost.Create(1);
 
-    // --- B. MOBILITY SETUP ---
+    // --- 3. MOBILITY SETUP ---
     MobilityHelper mobility;
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobility.Install(tapNodes);
@@ -584,7 +581,7 @@ int main(int argc, char *argv[]) {
     mobility.Install(ueNodes); 
     mobility.Install(remoteHost);
 
-    // Set initial positions dynamically
+    // Positions initiales dynamiques
     for (uint32_t i = 0; i < nGnbs; ++i) {
         gnbNodes.Get(i)->GetObject<MobilityModel>()->SetPosition(Vector(500.0 + (i * 100), 500.0, 0.0));
     }
@@ -592,18 +589,12 @@ int main(int argc, char *argv[]) {
         ueNodes.Get(i)->GetObject<MobilityModel>()->SetPosition(Vector(510.0 + i, 510.0, 0.0));
     }
 
-    // --- C. MAPPING (DYNAMIC) ---
-    // Link Ditto Thing IDs to ns-3 Node Pointers
-    for (uint32_t i = 0; i < nGnbs; ++i) {
-        thingIdToNode[discoveredGnbs[i]] = gnbNodes.Get(i);
-    }
-    for (uint32_t i = 0; i < nUes; ++i) {
-        thingIdToNode[discoveredUes[i]] = ueNodes.Get(i);
-    }
+    // --- 4. DITTO MAPPING ---
+    for (uint32_t i = 0; i < nGnbs; ++i) thingIdToNode[discoveredGnbs[i]] = gnbNodes.Get(i);
+    for (uint32_t i = 0; i < nUes; ++i) thingIdToNode[discoveredUes[i]] = ueNodes.Get(i);
     thingIdToNode["my5GNetwork:remoteHost"] = remoteHost.Get(0);
 
-
-    // --- D. CONTROL NETWORK ---
+    // --- 5. CONTROL NETWORK (TAP Bridge & Ditto App) ---
     InternetStackHelper internetControl;
     internetControl.Install(tapNodes);
 
@@ -626,30 +617,23 @@ int main(int argc, char *argv[]) {
     tapNodes.Get(1)->AddApplication(dittoApp);
     dittoApp->SetStartTime(Seconds(0.1));
 
-
-
-   // --- E. 5G NR ---
+    // --- 6. 5G NR CONFIGURATION ---
     Ptr<NrPointToPointEpcHelper> epcHelper = CreateObject<NrPointToPointEpcHelper>();
     Ptr<NrHelper> nrHelper = CreateObject<NrHelper>();
     nrHelper->SetEpcHelper(epcHelper);
 
+    // *** IMPORTANT : RÉGLER LES ATTRIBUTS AVANT L'INSTALLATION ***
+    // Cela corrige le bug du SINR irréaliste (87 dB)
+    nrHelper->SetGnbPhyAttribute("TxPower", DoubleValue(43.0));
+    nrHelper->SetUePhyAttribute("TxPower", DoubleValue(23.0));
+    nrHelper->SetUePhyAttribute("NoiseFigure", DoubleValue(9.0)); 
+    nrHelper->SetGnbPhyAttribute("NoiseFigure", DoubleValue(5.0));
 
-    // The config of beamforming is performec particularly to have a strong signal and good QoS values
-    // These params are tunable , their logic has to be re-seen
-
+    // Beamforming
     Ptr<IdealBeamformingHelper> bfHelper = CreateObject<IdealBeamformingHelper>();
     nrHelper->SetBeamformingHelper(bfHelper);
 
-    nrHelper->SetGnbPhyAttribute("TxPower", DoubleValue(43.0));
-    nrHelper->SetUePhyAttribute("TxPower", DoubleValue(23.0));
-
-
-
-    InternetStackHelper internet5G;
-    internet5G.Install(gnbNodes); 
-    internet5G.Install(ueNodes); 
-    internet5G.Install(remoteHost);
-
+    // Spectre et Bande passante (3.5 GHz, 100 MHz)
     CcBwpCreator ccBwpCreator;
     CcBwpCreator::SimpleOperationBandConf bandConf(3.5e9, 100e6, 1);
     OperationBandInfo band = ccBwpCreator.CreateOperationBandContiguousCc(bandConf);
@@ -657,85 +641,66 @@ int main(int argc, char *argv[]) {
     channelHelper->ConfigureFactories("UMa", "Default", "ThreeGpp");
     channelHelper->AssignChannelsToBands({band});
 
+    // Installation des couches Internet (GNB, UE, RemoteHost)
+    InternetStackHelper internet5G;
+    internet5G.Install(gnbNodes); 
+    internet5G.Install(ueNodes); 
+    internet5G.Install(remoteHost);
+
+    // Installation des terminaux 5G
     NetDeviceContainer gnbDevs = nrHelper->InstallGnbDevice(gnbNodes, CcBwpCreator::GetAllBwps({band}));
     NetDeviceContainer ueDevs = nrHelper->InstallUeDevice(ueNodes, CcBwpCreator::GetAllBwps({band}));
     
-    // IP add assignement
+    // IP et Attachement
     epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
-    
-    // RRC assignement
     nrHelper->AttachToClosestGnb(ueDevs, gnbDevs);
 
+    // --- 7. BEARER ACTIVATION (Une seule boucle propre) ---
+    for (uint32_t i = 0; i < ueDevs.GetN(); ++i) {
+        Ptr<NrUeNetDevice> nrUeDev = ueDevs.Get(i)->GetObject<NrUeNetDevice>();
+        uint64_t imsi = nrUeDev->GetImsi();
+        epcHelper->ActivateEpsBearer(ueDevs.Get(i), imsi, Create<NrEpcTft>(), 
+                                    NrEpsBearer(NrEpsBearer::NGBR_VIDEO_TCP_DEFAULT));
+    }
+
+    // --- 8. METRICS & TRACES (Connexion finale) ---
+    ConnectSimulationTraces(ueDevs, gnbDevs, ueNodes);
+    
     Simulator::Schedule(Seconds(1.1), &ComputeThroughput, nrHelper, nGnbs, nUes);
     Simulator::Schedule(Seconds(1.2), &ComputeLatency, nrHelper, nGnbs, nUes);
     Simulator::Schedule(Seconds(1.3), &ComputeDistance, nrHelper, gnbNodes, nGnbs, nUes);
     Simulator::Schedule(Seconds(1.4), &ComputePacketLoss, nrHelper, nGnbs, nUes);
+    // Simulator::Schedule(Seconds(1.5), &ComputeBler, nrHelper, nGnbs, nUes);
 
-
-
-   // BEARER ACTIVATION (Canal de données)
-    for (uint32_t i = 0; i < ueDevs.GetN(); ++i) {
-        Ptr<NetDevice> ueDev = ueDevs.Get(i);
-        Ptr<NrUeNetDevice> nrUeDev = ueDev->GetObject<NrUeNetDevice>();
-        uint64_t imsi = nrUeDev->GetImsi();
-
-        Ptr<NrEpcTft> tft = Create<NrEpcTft>();
-        
-        NrEpsBearer bearer(NrEpsBearer::NGBR_VIDEO_TCP_DEFAULT);
-
-        epcHelper->ActivateEpsBearer(ueDev, imsi, tft, bearer);
-    }
-
-    nrHelper->SetUePhyAttribute("NoiseFigure", DoubleValue(9.0));
-    nrHelper->SetGnbPhyAttribute("NoiseFigure", DoubleValue(5.0));
-
-
-    // --- UEs/gnbs  --- //
-
-    ConnectSimulationTraces(ueDevs, gnbDevs, ueNodes);
-
-
-    // --- F. INTERNET ---
+    // --- 9. CORE NETWORK & INTERNET ROUTING ---
     Ptr<Node> pgw = epcHelper->GetPgwNode();
     PointToPointHelper p2p;
     p2p.SetDeviceAttribute("DataRate", StringValue("10Gbps"));
     p2p.SetChannelAttribute("Delay", StringValue("1ms"));
     NetDeviceContainer internetDevices = p2p.Install(pgw, remoteHost.Get(0));
+    
     Ipv4AddressHelper ipv4Internet;
     ipv4Internet.SetBase("1.0.0.0", "255.0.0.0");
     Ipv4InterfaceContainer internetIpIfaces = ipv4Internet.Assign(internetDevices);
 
+    // Routage statique pour le RemoteHost
     Ipv4StaticRoutingHelper ipv4RoutingHelper;
     Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting(remoteHost.Get(0)->GetObject<Ipv4>());
-    // remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), internetIpIfaces.GetAddress(0), 1);
     remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), Ipv4Address("1.0.0.1"), 1);
+    
+    // Routage par défaut pour les UEs
     Ipv4StaticRoutingHelper staticRouting;
     for (uint32_t i = 0; i < ueNodes.GetN(); ++i) {
         Ptr<Ipv4StaticRouting> ueStaticRouting = staticRouting.GetStaticRouting(ueNodes.Get(i)->GetObject<Ipv4>());
         ueStaticRouting->SetDefaultRoute(Ipv4Address("7.0.0.1"), 1);
     }
     
-    // FIX MOBILITY
+    // --- 10. FINALIZATION & RUN ---
+    // Fix mobilité pour tous les noeuds
     for (uint32_t i = 0; i < NodeList::GetNNodes(); ++i) {
         Ptr<Node> n = NodeList::GetNode(i);
         if (!n->GetObject<MobilityModel>()) mobility.Install(n);
     }
-
-    
-    AnimationInterface anim("simulation-5g-ditto.xml");
-    anim.SetConstantPosition(tapNodes.Get(0), 0, 100);
-    anim.SetConstantPosition(tapNodes.Get(1), 20, 100);
-    anim.SetConstantPosition(remoteHost.Get(0), 60, 100);
-
-    // Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress(1); 
-    // InstallControlTraffic(ueNodes, remoteHost.Get(0), remoteHostAddr);
-
-    
-    Ptr<OutputStreamWrapper> routingStream = Create<OutputStreamWrapper> (&std::cout);
-    Ipv4StaticRoutingHelper routingHelper;
-    // On affiche la table de routage de l'UE n°0 à 3.0 secondes (quand il commence à envoyer)
-    routingHelper.PrintRoutingTableAt (Seconds (3.0), ueNodes.Get (0), routingStream);
-
 
     if (g_debugMode) {
         Simulator::Schedule(Seconds(1.0), &CheckInterfaceStatus, ueNodes.Get(0));
@@ -746,11 +711,8 @@ int main(int argc, char *argv[]) {
         Simulator::Schedule(Seconds(10.0), &CheckNeighborCache, ueNodes.Get(0));
     }
 
-
     nrHelper->EnableTraces();
-
     g_snapshotMgr.Open(g_outputFile);
-
     Simulator::Schedule(Seconds(1.0), &SnapshotManager::DoSnapshot, &g_snapshotMgr);
 
     NS_LOG_INFO("Simulation Starting...");
@@ -761,7 +723,6 @@ int main(int argc, char *argv[]) {
     Simulator::Destroy();
     return 0;
 }
-
 
 
 
