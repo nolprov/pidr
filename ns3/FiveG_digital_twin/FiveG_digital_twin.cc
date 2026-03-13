@@ -364,19 +364,13 @@ private:
                                              attr.get("packet_size", 1000).asInt(), 
                                              attr.get("interval", 0.001).asDouble());
             }
-        }
+        }   
     }
 }
 };
 
 
-void LogDataset() {
-    // NS_LOG_INFO("--- DATASET SNAPSHOT ---");
-    for (auto const& [nodeId, radio] : table_radio_5g) {
-        NS_LOG_INFO("Node " << nodeId << " | DL SINR: " << radio.dlSinr << " | UL SINR: " << radio.ulSinr);
-    }
-    Simulator::Schedule(Seconds(1.0), &LogDataset);
-}
+
 
 
 class SnapshotManager {
@@ -427,9 +421,8 @@ public:
                 
                 if (dittoId.find("ue") != std::string::npos) {
                     m_file << "\"serving_gnb\": \"" << radio.servingGnb << "\", ";
-                    m_file << "\"sinr_dl\": " << radio.dlSinr << ", ";
-                    m_file << "\"sinr_ul\": " << radio.ulSinr << ", ";
-                    m_file << "\"sinr_d2d\": -999";
+                    m_file << "\"sinr_dl\": " << radio.dlSinr ;
+                    // m_file << "\"sinr_d2d\": -999";
                 } else {
                     m_file << "\"type\": \"gNB\"";
                 }
@@ -453,7 +446,7 @@ public:
             m_file << "\"type\": \"" << (isDl ? "DL" : "UL") << "\", ";
             m_file << "\"src\": \"" << flow.srcName << "\", ";
             m_file << "\"dst\": \"" << flow.dstName << "\", ";
-            m_file << "\"app\": \"" << (isDl ? "DL_Traffic" : "UL_Traffic") << "\", ";
+            // m_file << "\"app\": \"" << (isDl ? "DL_Traffic" : "UL_Traffic") << "\", ";
             m_file << "\"packet_size\": " << flow.packetSize << ", ";
             m_file << "\"interval\": " << flow.interval << ", ";
             m_file << "\"throughput\": " << (isDl ? stats.macThroughputDl : stats.macThroughputUl) << ", ";
