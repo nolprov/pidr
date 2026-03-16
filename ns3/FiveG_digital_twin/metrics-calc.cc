@@ -7,6 +7,11 @@ std::map<std::string, Ptr<Node>> thingIdToNode;
 std::map<uint32_t, UeRadioTable> table_radio_5g;
 std::map<uint16_t, uint32_t> rnti_to_nodeid;
 std::map<std::string, FlowInfo> active_flows;
+std::map<uint16_t, uint32_t> g_dlAck;
+std::map<uint16_t, uint32_t> g_dlNack;
+std::map<uint16_t, uint32_t> g_ulAck;
+std::map<uint16_t, uint32_t> g_ulNack;
+
 
 
 void TraceMacDlThroughput(uint32_t nodeId, Ptr<const Packet> packet) {
@@ -240,4 +245,60 @@ void ComputePacketLoss(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes) {
         }
     }
     Simulator::Schedule(Seconds(interval), &ComputePacketLoss, nrHelper, nGnbs, nUes);
+}
+
+
+void HarqDlSink(const ns3::DlHarqInfo& info) {
+    if (info.IsReceivedOk()) {
+        g_dlAck[info.m_rnti]++;
+    } else {
+        g_dlNack[info.m_rnti]++;
+    }
+}
+
+void HarqUlSink(const ns3::UlHarqInfo& info) {
+    if (info.IsReceivedOk()) {
+        g_ulAck[info.m_rnti]++;
+    } else {
+        g_ulNack[info.m_rnti]++;
+    }
+}
+
+void ComputeBler(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes) {
+    double interval = 1.0; 
+    // Historiques pour calcul des deltas (Ta logique)
+    static std::map<uint16_t, uint64_t> lastDlAck, lastDlNack, lastUlAck, lastUlNack;
+    
+    std::cout << "\n\033[1;35m--- 5G BLER (%) [DL & UL] ---\033[0m" << std::endl;
+
+    for (uint32_t i = 0; i < nUes; ++i) {
+        uint16_t rnti = i + 1; 
+        uint32_t nodeId = i + 2 + nGnbs; 
+
+        // --- CALCUL DOWNLINK BLER ---
+        uint64_t dAck = g_dlAck[rnti] - lastDlAck[rnti];
+        uint64_t dNack = g_dlNack[rnti] - lastDlNack[rnti];
+        uint64_t dTotal = dAck + dNack;
+        double blerDl = (dTotal > 0) ? (static_cast<double>(dNack) / dTotal) * 100.0 : 0.0;
+
+        // --- CALCUL UPLINK BLER ---
+        uint64_t uAck = g_ulAck[rnti] - lastUlAck[rnti];
+        uint64_t uNack = g_ulNack[rnti] - lastUlNack[rnti];
+        uint64_t uTotal = uAck + uNack;
+        double blerUl = (uTotal > 0) ? (static_cast<double>(uNack) / uTotal) * 100.0 : 0.0;
+
+        // Sauvegardes
+        lastDlAck[rnti] = g_dlAck[rnti]; lastDlNack[rnti] = g_dlNack[rnti];
+        lastUlAck[rnti] = g_ulAck[rnti]; lastUlNack[rnti] = g_ulNack[rnti];
+
+        std::cout << "Node " << nodeId << " | DL BLER: " << std::fixed << std::setprecision(2) << blerDl 
+                  << "% | UL BLER: " << blerUl << "%" << std::endl;
+
+        // Mise à jour table radio
+        if (table_radio_5g.count(nodeId)) {
+            table_radio_5g[nodeId].blerDl = (blerDl < 0) ? 0 : blerDl;
+            table_radio_5g[nodeId].blerUl = (blerUl < 0) ? 0 : blerUl;
+        }
+    }
+    Simulator::Schedule(Seconds(interval), &ComputeBler, nrHelper, nGnbs, nUes);
 }

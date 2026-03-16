@@ -29,6 +29,8 @@
 #include "ns3/nr-eps-bearer.h"
 #include "ns3/nr-epc-tft.h"
 #include "ns3/core-module.h"
+#include "ns3/nr-gnb-mac.h"
+#include "ns3/nr-phy-mac-common.h" 
 
 using namespace ns3;
  
@@ -68,6 +70,14 @@ extern std::map<uint16_t, uint32_t> rnti_to_nodeid;
 extern std::map<std::string, FlowInfo> active_flows;
 
 
+extern std::map<uint16_t, uint32_t> g_dlAck;
+extern std::map<uint16_t, uint32_t> g_dlNack;
+
+extern std::map<uint16_t, uint32_t> g_ulAck;
+extern std::map<uint16_t, uint32_t> g_ulNack;
+
+
+
 
 void TraceMacDlThroughput(uint32_t nodeId, Ptr<const Packet> packet);
 // void ComputeThroughput();
@@ -80,5 +90,9 @@ void ComputeThroughput(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes);
 void ComputeLatency(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes);
 void ComputeDistance(Ptr<NrHelper> nrHelper, NodeContainer gnbNodes, uint32_t nGnbs, uint32_t nUes);
 void ComputePacketLoss(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes);
+void ComputeBler(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes);
+void HarqDlSink(ns3::DlHarqInfo const & info);
+void HarqUlSink(ns3::UlHarqInfo const & info);
+
 
 #endif

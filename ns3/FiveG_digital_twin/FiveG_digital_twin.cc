@@ -663,7 +663,7 @@ int main(int argc, char *argv[]) {
     Simulator::Schedule(Seconds(1.2), &ComputeLatency, nrHelper, nGnbs, nUes);
     Simulator::Schedule(Seconds(1.3), &ComputeDistance, nrHelper, gnbNodes, nGnbs, nUes);
     Simulator::Schedule(Seconds(1.4), &ComputePacketLoss, nrHelper, nGnbs, nUes);
-    // Simulator::Schedule(Seconds(1.5), &ComputeBler, nrHelper, nGnbs, nUes);
+    Simulator::Schedule(Seconds(1.5), &ComputeBler, nrHelper, nGnbs, nUes);
 
     // --- 9. CORE NETWORK & INTERNET ROUTING ---
     Ptr<Node> pgw = epcHelper->GetPgwNode();
@@ -693,6 +693,18 @@ int main(int argc, char *argv[]) {
     for (uint32_t i = 0; i < NodeList::GetNNodes(); ++i) {
         Ptr<Node> n = NodeList::GetNode(i);
         if (!n->GetObject<MobilityModel>()) mobility.Install(n);
+    }
+
+    // À mettre juste avant Simulator::Run()
+    for (uint32_t i = 0; i < gnbDevs.GetN(); ++i) {
+        Ptr<NrGnbNetDevice> gnbDev = DynamicCast<NrGnbNetDevice>(gnbDevs.Get(i));
+        if (gnbDev) {
+            Ptr<NrGnbMac> gnbMac = gnbDev->GetMac(0);
+            if (gnbMac) {
+                gnbMac->TraceConnectWithoutContext("DlHarqFeedback", MakeCallback(&HarqDlSink));
+                gnbMac->TraceConnectWithoutContext("UlHarqFeedback", MakeCallback(&HarqUlSink));
+            }
+        }
     }
 
     if (g_debugMode) {
@@ -1130,5 +1142,3 @@ Old
 
 //     return 0;
 // }
-
-
