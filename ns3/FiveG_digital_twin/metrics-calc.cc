@@ -58,9 +58,17 @@ void TraceMacUlThroughput(uint16_t rnti, Ptr<const Packet> packet) {
 
 void UpdateDlSinrTable(uint32_t nodeId, uint16_t cellId, uint16_t rnti, double sinr, uint16_t bwpId) {
     table_radio_5g[nodeId].dlSinr = sinr;
-    std::cout << "\033[1;36m[PHY-DL]\033[0m Node: " << nodeId 
-              << " | RNTI: " << rnti 
-              << " | SINR: " << sinr << " dB" << std::endl;
+
+    static std::map<uint32_t, Time> lastPrintTimes;
+    Time now = Simulator::Now();
+
+    if (now - lastPrintTimes[nodeId] >= Seconds(0.5)) {
+        std::cout << "\033[1;36m[PHY-DL]\033[0m Node: " << nodeId 
+                  << " | RNTI: " << rnti 
+                  << " | SINR: " << std::fixed << std::setprecision(2) << sinr << " dB" << std::endl;
+        
+        lastPrintTimes[nodeId] = now; 
+    }
 }
 
 
