@@ -383,6 +383,7 @@ public:
         // On ouvre en lecture/écriture
         m_file.open(filename, std::ios::out | std::ios::trunc);
         m_file << "[\n";
+    
         m_file.flush();
     }
 
@@ -610,19 +611,25 @@ int main(int argc, char *argv[]) {
     tapNodes.Get(1)->AddApplication(dittoApp);
     dittoApp->SetStartTime(Seconds(0.1));
 
-    // --- 6. 5G NR CONFIGURATION ---
     Ptr<NrPointToPointEpcHelper> epcHelper = CreateObject<NrPointToPointEpcHelper>();
     Ptr<NrHelper> nrHelper = CreateObject<NrHelper>();
     nrHelper->SetEpcHelper(epcHelper);
 
-    // nrHelper->SetGnbPhyAttribute("TxPower", DoubleValue(43.0));
-    // nrHelper->SetUePhyAttribute("TxPower", DoubleValue(23.0));
-    nrHelper->SetUePhyAttribute("NoiseFigure", DoubleValue(9.0)); 
+    nrHelper->SetGnbPhyAttribute("TxPower", DoubleValue(46.0));
+
+    nrHelper->SetUePhyAttribute("TxPower", DoubleValue(23.0));
+
+
+    nrHelper->SetUePhyAttribute("NoiseFigure", DoubleValue(7.0)); 
     nrHelper->SetGnbPhyAttribute("NoiseFigure", DoubleValue(5.0));
 
     // Beamforming
-    Ptr<IdealBeamformingHelper> bfHelper = CreateObject<IdealBeamformingHelper>();
-    nrHelper->SetBeamformingHelper(bfHelper);
+    // Ptr<IdealBeamformingHelper> bfHelper = CreateObject<IdealBeamformingHelper>();
+    // bfHelper->SetAttribute("BeamformingPeriodicity", TimeValue(MilliSeconds(1000)));
+
+    // nrHelper->SetBeamformingHelper(bfHelper);
+
+
 
     // Spectre et Bande passante (3.5 GHz, 100 MHz)
     CcBwpCreator ccBwpCreator;
@@ -693,17 +700,16 @@ int main(int argc, char *argv[]) {
         if (!n->GetObject<MobilityModel>()) mobility.Install(n);
     }
 
-    // À mettre juste avant Simulator::Run()
-    for (uint32_t i = 0; i < gnbDevs.GetN(); ++i) {
-        Ptr<NrGnbNetDevice> gnbDev = DynamicCast<NrGnbNetDevice>(gnbDevs.Get(i));
-        if (gnbDev) {
-            Ptr<NrGnbMac> gnbMac = gnbDev->GetMac(0);
-            if (gnbMac) {
-                gnbMac->TraceConnectWithoutContext("DlHarqFeedback", MakeCallback(&HarqDlSink));
-                gnbMac->TraceConnectWithoutContext("UlHarqFeedback", MakeCallback(&HarqUlSink));
-            }
-        }
-    }
+    // for (uint32_t i = 0; i < gnbDevs.GetN(); ++i) {
+    //     Ptr<NrGnbNetDevice> gnbDev = DynamicCast<NrGnbNetDevice>(gnbDevs.Get(i));
+    //     if (gnbDev) {
+    //         Ptr<NrGnbMac> gnbMac = gnbDev->GetMac(0);
+    //         if (gnbMac) {
+    //             gnbMac->TraceConnectWithoutContext("DlHarqFeedback", MakeCallback(&HarqDlSink));
+    //             gnbMac->TraceConnectWithoutContext("UlHarqFeedback", MakeCallback(&HarqUlSink));
+    //         }
+    //     }
+    // }
 
     if (g_debugMode) {
         Simulator::Schedule(Seconds(1.0), &CheckInterfaceStatus, ueNodes.Get(0));

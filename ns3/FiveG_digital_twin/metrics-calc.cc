@@ -38,26 +38,11 @@ void TraceMacUlThroughput(uint16_t rnti, Ptr<const Packet> packet) {
     }
 }
 
-// // Fonction pour calculer le débit toutes les secondes
-// void ComputeThroughput() {
-//     for (auto & [nodeId, metrics] : table_radio_5g) {
-//         metrics.macThroughputDl = (metrics.bytesRxDl * 8.0) / (1e6 * g_captureInterval);
-//         metrics.macThroughputUl = (metrics.bytesRxUl * 8.0) / (1e6 * g_captureInterval);
-        
-//         // PRINT DE PREUVE SI TRAFIC
-//         if (metrics.macThroughputDl > 0 || metrics.macThroughputUl > 0) {
-//             std::cout << "\033[1;32m[MAC-STATS]\033[0m Node " << nodeId 
-//                       << " | Thr DL: " << metrics.macThroughputDl << " Mbps"
-//                       << " | Thr UL: " << metrics.macThroughputUl << " Mbps" << std::endl;
-//         }
-
-//         metrics.bytesRxDl = 0; metrics.bytesRxUl = 0;
-//     }
-//     Simulator::Schedule(Seconds(g_captureInterval), &ComputeThroughput);
-// }
-
 void UpdateDlSinrTable(uint32_t nodeId, uint16_t cellId, uint16_t rnti, double sinr, uint16_t bwpId) {
-    table_radio_5g[nodeId].dlSinr = sinr;
+    // CONVERSION LINÉAIRE -> dB
+    double sinrDb = 10 * std::log10(sinr); 
+    
+    table_radio_5g[nodeId].dlSinr = sinrDb;
 
     static std::map<uint32_t, Time> lastPrintTimes;
     Time now = Simulator::Now();
@@ -65,7 +50,7 @@ void UpdateDlSinrTable(uint32_t nodeId, uint16_t cellId, uint16_t rnti, double s
     if (now - lastPrintTimes[nodeId] >= Seconds(0.5)) {
         std::cout << "\033[1;36m[PHY-DL]\033[0m Node: " << nodeId 
                   << " | RNTI: " << rnti 
-                  << " | SINR: " << std::fixed << std::setprecision(2) << sinr << " dB" << std::endl;
+                  << " | SINR: " << std::fixed << std::setprecision(2) << sinrDb << " dB" << std::endl;
         
         lastPrintTimes[nodeId] = now; 
     }
