@@ -284,7 +284,7 @@ void ComputeBler(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes) {
         lastDlAck[rnti] = g_dlAck[rnti]; lastDlNack[rnti] = g_dlNack[rnti];
         lastUlAck[rnti] = g_ulAck[rnti]; lastUlNack[rnti] = g_ulNack[rnti];
 
-        std::cout << "Node " << nodeId << " | DL BLER: " << std::fixed << std::setprecision(2) << blerDl 
+        std::cout << "Node " << nodeId << " | DL BLER: " << blerDl 
                   << "% | UL BLER: " << blerUl << "%" << std::endl;
 
         // Mise à jour table radio
