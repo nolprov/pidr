@@ -5,9 +5,9 @@ import json
 from datetime import datetime
 
 # --- CONFIGURATION ---
-SENDER_IP = "10.255.255.1"
+SENDER_IP = "198.19.10.1"
 SENDER_PORT = 9999
-CLIENT_IP = "10.255.255.2"
+CLIENT_IP = "198.19.10.2"
 OUTPUT_JSON_FILE = "dt_collected_history.json"
 INTERVAL_REQ_TIME = 0.5
 

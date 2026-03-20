@@ -6,25 +6,38 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+# Configuration: Using Benchmark IPs (198.19.x.x)
+# Subnet for ns-3
+NS3_R_IP="198.19.10.1"
+NS3_C_IP="198.19.10.2"
+NS3_INT="vnet-ns3"
+
+# Subnet for Simu5G
+S5G_R_IP="198.19.20.1"
+S5G_C_IP="198.19.20.2"
+S5G_INT="vnet-simu5g"
+
 echo "[*] Loading dummy network module..."
 modprobe dummy
 
-# 1. Create the Responder Interface (SENDER_IP in your first script)
-echo "[*] Creating interface for Responder (10.255.255.1)..."
-ip link add dev dt-responder type dummy
-ip addr add 10.255.255.1/24 dev dt-responder
-ip link set dt-responder up
+# 1. Create NS-3 Virtual Interface
+echo "[*] Creating interface $NS3_INT ($NS3_R_IP)..."
+ip link add dev $NS3_INT type dummy
+ip addr add $NS3_R_IP/24 dev $NS3_INT
+ip addr add $NS3_C_IP/24 dev $NS3_INT
+ip link set $NS3_INT up
 
-# 2. Create the Collector Interface (CLIENT_IP in your first script)
-echo "[*] Creating interface for Collector (10.255.255.2)..."
-ip link add dev dt-collector type dummy
-ip addr add 10.255.255.2/24 dev dt-collector
-ip link set dt-collector up
+# 2. Create Simu5G Virtual Interface
+echo "[*] Creating interface $S5G_INT ($S5G_R_IP)..."
+ip link add dev $S5G_INT type dummy
+ip addr add $S5G_R_IP/24 dev $S5G_INT
+ip addr add $S5G_C_IP/24 dev $S5G_INT
+ip link set $S5G_INT up
 
-echo "[+] Interfaces created successfully!"
-echo "---------------------------------------"
-ip addr show | grep -E "dt-responder|dt-collector"
-echo "---------------------------------------"
-echo "[!] IMPORTANT: Ensure your Python scripts use these IPs:"
-echo "    Responder (Server) should bind to: 10.255.255.1"
-echo "    Collector (Client) should bind to: 10.255.255.2"
+echo "[+] Done! Unusual network interfaces are ready."
+echo "------------------------------------------------"
+echo "NS-3 Config:"
+echo "   Responder: $NS3_R_IP | Collector: $NS3_C_IP"
+echo "Simu5G Config:"
+echo "   Responder: $S5G_R_IP | Collector: $S5G_C_IP"
+echo "------------------------------------------------"
