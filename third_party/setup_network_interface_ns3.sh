@@ -6,38 +6,20 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-# Configuration: Using Benchmark IPs (198.19.x.x)
-# Subnet for ns-3
-NS3_R_IP="198.19.10.1"
-NS3_C_IP="198.19.10.2"
-NS3_INT="vnet-ns3"
+# 1. Cleanup old NS-3 specific components
+echo "[*] Cleaning up existing NS-3 network..."
+ip link delete vnet-ns3 2>/dev/null
+# Force clear Port 9999 (UDP)
+fuser -k 9999/udp 2>/dev/null
 
-# Subnet for Simu5G
-S5G_R_IP="198.19.20.1"
-S5G_C_IP="198.19.20.2"
-S5G_INT="vnet-simu5g"
-
-echo "[*] Loading dummy network module..."
+# 2. Create the dummy interface for NS-3
+# Unusual IPs: 198.19.10.1 (Responder) and 198.19.10.2 (Collector)
+echo "[*] Creating interface vnet-ns3 (Subnet 198.19.10.x)..."
 modprobe dummy
+ip link add dev vnet-ns3 type dummy
+ip addr add 198.19.10.1/24 dev vnet-ns3
+ip addr add 198.19.10.2/24 dev vnet-ns3
+ip link set vnet-ns3 up
 
-# 1. Create NS-3 Virtual Interface
-echo "[*] Creating interface $NS3_INT ($NS3_R_IP)..."
-ip link add dev $NS3_INT type dummy
-ip addr add $NS3_R_IP/24 dev $NS3_INT
-ip addr add $NS3_C_IP/24 dev $NS3_INT
-ip link set $NS3_INT up
-
-# 2. Create Simu5G Virtual Interface
-echo "[*] Creating interface $S5G_INT ($S5G_R_IP)..."
-ip link add dev $S5G_INT type dummy
-ip addr add $S5G_R_IP/24 dev $S5G_INT
-ip addr add $S5G_C_IP/24 dev $S5G_INT
-ip link set $S5G_INT up
-
-echo "[+] Done! Unusual network interfaces are ready."
-echo "------------------------------------------------"
-echo "NS-3 Config:"
-echo "   Responder: $NS3_R_IP | Collector: $NS3_C_IP"
-echo "Simu5G Config:"
-echo "   Responder: $S5G_R_IP | Collector: $S5G_C_IP"
-echo "------------------------------------------------"
+echo "[+] NS-3 Digital Twin Network is UP."
+ip addr show vnet-ns3 | grep "inet "
