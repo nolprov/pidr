@@ -145,17 +145,25 @@ private:
 
 public:
     void UpdateNodeMobility(std::string id, double x, double y, double z, double speed = 0.0) {
-        if (thingIdToNode.count(id)) {
-            Ptr<Node> node = thingIdToNode[id];
-            uint32_t nodeId = node->GetId();
-            Ptr<MobilityModel> mobility = node->GetObject<MobilityModel>();
-            if (mobility) {
-                mobility->SetPosition(Vector3D(x, y, z));
-                table_radio_5g[nodeId].currentSpeed = speed; 
-                NS_LOG_INFO("API [Mobility]: " << id << " moved to (" << x << "," << y << ") speed: " << speed);
-            }
-        }
+    std::string cleanId = id;
+    if (id.find("my5GNetwork:") == std::string::npos && id != "server") {
+        cleanId = "my5GNetwork:" + id;
     }
+
+    // --- AJOUT DU DEBUG LOG ---
+    if (thingIdToNode.count(cleanId)) {
+        Ptr<Node> node = thingIdToNode[cleanId];
+        uint32_t nodeId = node->GetId();
+        Ptr<MobilityModel> mobility = node->GetObject<MobilityModel>();
+        if (mobility) {
+            mobility->SetPosition(Vector3D(x, y, z));
+            table_radio_5g[nodeId].currentSpeed = speed; 
+            std::cout << "\033[1;32m[MOBILITY-OK]\033[0m Node " << cleanId << " moved to (" << x << "," << y << ")" << std::endl;
+        }
+    } else {
+        std::cout << "\033[1;31m[MOBILITY-ERROR]\033[0m ID received from PT '" << id << "' (cleaned as '" << cleanId << "') is NOT in thingIdToNode map!" << std::endl;
+    }
+}
 
     Ipv4Address GetNodeIp(Ptr<Node> node) {
         Ptr<Ipv4> ipv4 = node->GetObject<Ipv4>();
@@ -358,12 +366,20 @@ private:
 
             // 2. TRAFIC 
             if (attr.isMember("src") && attr.isMember("dst")) {
+
+                double flowInt = attr.get("interval", 0.001).asDouble();
+                int pSize = attr.get("packet_size", 1000).asInt();
+
+                // FORCE l'affichage pour vérifier dans ta console
+                std::cout << std::fixed << std::setprecision(6); 
+                std::cout << "[DEBUG] Interval recu: " << flowInt << " s" << std::endl;
+
                 g_handler.UpdateFlowParameters(tid, 
-                                             attr["src"].asString(), 
-                                             attr["dst"].asString(), 
-                                             attr.get("packet_size", 1000).asInt(), 
-                                             attr.get("interval", 0.001).asDouble());
-            }
+                                            attr["src"].asString(), 
+                                            attr["dst"].asString(), 
+                                            pSize, 
+                                            flowInt);
+                    }
         }   
     }
 }

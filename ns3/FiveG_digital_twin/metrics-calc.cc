@@ -102,7 +102,7 @@ void TracePhyStatsUl(uint16_t rnti, uint16_t bwpId, uint32_t nCbs, uint32_t nPas
 
 // --- THROUGHPUT ---
 void ComputeThroughput(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes) {
-    double interval = 1.0;
+    double interval = 0.1;
     Ptr<NrBearerStatsCalculator> bearerStats = nrHelper->GetRlcStatsCalculator();
     if (!bearerStats) {
         Simulator::Schedule(Seconds(interval), &ComputeThroughput, nrHelper, nGnbs, nUes);
@@ -126,7 +126,7 @@ void ComputeThroughput(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes) {
         double ulThr = ((currentUl - lastUlBytes[imsi]) * 8.0) / (interval * 1e6);
         lastDlBytes[imsi] = currentDl; lastUlBytes[imsi] = currentUl;
 
-        std::cout << "Node " << nodeId << " (UE" << i << ") | DL: " << std::fixed << std::setprecision(3) << dlThr << " Mbps" << std::endl;
+        std::cout << "Node " << nodeId << " (UE" << i << ") | DL: " << std::fixed << dlThr << " Mbps" << std::endl;
 
         if (table_radio_5g.count(nodeId)) {
             table_radio_5g[nodeId].macThroughputDl = dlThr;
