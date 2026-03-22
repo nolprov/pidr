@@ -4,7 +4,7 @@ import os
 
 # --- PT CONFIGURATION ---
 LISTEN_IP = "198.19.20.1"
-LISTEN_PORT = 8888  
+LISTEN_PORT = 8000 
 # VERIFIE BIEN CE CHEMIN :
 SOURCE_JSON_FILE = "../simulations/network_state.json" 
 

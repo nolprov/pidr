@@ -6,7 +6,7 @@ from datetime import datetime
 
 # --- PT CONFIGURATION ---
 TARGET_IP = "198.19.20.1"
-TARGET_PORT = 8888
+TARGET_PORT = 8000
 BIND_IP = "198.19.20.2"
 OUTPUT_HISTORY_FILE = "physical_twin_history.json"
 INTERVAL = 0.5

@@ -7,14 +7,14 @@ import sys
 from datetime import datetime
 
 # --- CONFIGURATION ---
-GLOBAL_FREQ = 10  # This ensures 10 packets per second (0.1s interval)
+GLOBAL_FREQ = 10  # 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 JSON_PATH = os.path.join(SCRIPT_DIR, "..", "simulations", "network_state.json")
 IDS_LOG_PATH = os.path.join(SCRIPT_DIR, "..", "simulations", "sent_packet_ids.txt")
 
-UDP_IP = "127.0.0.1"
+UDP_IP = "10.255.0.2"
 UDP_PORT = 9999
-INTERFACE = "lo"
+INTERFACE = "veth-sender"
 
 NETWORK_PROFILES = {
     "1": {"delay": "1ms", "loss": "0%", "rate": "1000mbit", "desc": "Ideal Link"},
