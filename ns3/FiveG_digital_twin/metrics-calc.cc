@@ -98,11 +98,8 @@ void TracePhyStatsUl(uint16_t rnti, uint16_t bwpId, uint32_t nCbs, uint32_t nPas
     }
 }
 
-
-
-// --- THROUGHPUT ---
 void ComputeThroughput(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes) {
-    double interval = 0.1;
+    double interval = 0.1; // Fenêtre de calcul (100ms)
     Ptr<NrBearerStatsCalculator> bearerStats = nrHelper->GetRlcStatsCalculator();
     if (!bearerStats) {
         Simulator::Schedule(Seconds(interval), &ComputeThroughput, nrHelper, nGnbs, nUes);
@@ -110,11 +107,13 @@ void ComputeThroughput(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes) {
     }
 
     static std::map<uint64_t, uint64_t> lastDlBytes, lastUlBytes;
-    std::cout << "\n\033[1;32m--- 5G THROUGHPUT (Mbps) ---\033[0m" << std::endl;
+    
+    // Changement du titre pour le debug
+    std::cout << "\n\033[1;32m--- 5G THROUGHPUT (Match PT: Bytes/s) ---\033[0m" << std::endl;
 
     for (uint32_t i = 0; i < nUes; ++i) {
-        uint64_t imsi = i + 2 + nGnbs;           // 
-        uint32_t nodeId = i + 2 + nGnbs; // Tap(2) + Gnbs
+        uint64_t imsi = i + 2 + nGnbs;           
+        uint32_t nodeId = i + 2 + nGnbs; 
         
         uint64_t currentDl = 0, currentUl = 0;
         for (uint8_t lcid = 1; lcid <= 5; ++lcid) {
@@ -122,20 +121,24 @@ void ComputeThroughput(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes) {
             currentUl += bearerStats->GetUlRxData(imsi, lcid);
         }
         
-        double dlThr = ((currentDl - lastDlBytes[imsi]) * 8.0) / (interval * 1e6);
-        double ulThr = ((currentUl - lastUlBytes[imsi]) * 8.0) / (interval * 1e6);
-        lastDlBytes[imsi] = currentDl; lastUlBytes[imsi] = currentUl;
+        // Formule : (Delta Octets) / (Temps en secondes)
+        double dlThrBytesPerSec = (double)(currentDl - lastDlBytes[imsi]) / interval;
+        double ulThrBytesPerSec = (double)(currentUl - lastUlBytes[imsi]) / interval;
+        
+        lastDlBytes[imsi] = currentDl; 
+        lastUlBytes[imsi] = currentUl;
 
-        std::cout << "Node " << nodeId << " (UE" << i << ") | DL: " << std::fixed << dlThr << " Mbps" << std::endl;
+        std::cout << "Node " << nodeId << " (UE" << i << ") | DL: " 
+                  << dlThrBytesPerSec << " Bytes/s" << std::endl;
 
         if (table_radio_5g.count(nodeId)) {
-            table_radio_5g[nodeId].macThroughputDl = dlThr;
-            table_radio_5g[nodeId].macThroughputUl = ulThr;
+            // On sauvegarde maintenant en Bytes/s dans le JSON
+            table_radio_5g[nodeId].macThroughputDl = dlThrBytesPerSec;
+            table_radio_5g[nodeId].macThroughputUl = ulThrBytesPerSec;
         }
     }
     Simulator::Schedule(Seconds(interval), &ComputeThroughput, nrHelper, nGnbs, nUes);
 }
-
 // --- LATENCY ---
 void ComputeLatency(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes) {
     double interval = 1.0; 
