@@ -16,7 +16,7 @@ def get_last_snapshot(filepath):
         with open(filepath, 'r') as f: 
             data = json.load(f)
             if isinstance(data, list) and len(data) > 0:
-                return data[-1] # Take the last snapshot in the list
+                return data[-1]
     except Exception as e:
         print(f"[!] Error reading JSON: {e}")
     return None
@@ -28,7 +28,7 @@ def main():
     print(f"[*] Responder Ready. Listening on {LISTEN_IP}:{LISTEN_PORT}...")
 
     while True:
-        data, addr = sock.recvfrom(65535) # Larger buffer for complex JSON
+        data, addr = sock.recvfrom(65535) 
         try:
             request = json.loads(data.decode())
             request_id = request.get("id", "unknown")
