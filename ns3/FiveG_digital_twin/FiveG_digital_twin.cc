@@ -146,9 +146,15 @@ private:
 public:
     void UpdateNodeMobility(std::string id, double x, double y, double z, double speed = 0.0) {
     std::string cleanId = id;
-    if (id.find("my5GNetwork:") == std::string::npos && id != "server") {
-        cleanId = "my5GNetwork:" + id;
+
+    cleanId.erase(std::remove(cleanId.begin(), cleanId.end(), '['), cleanId.end());
+    cleanId.erase(std::remove(cleanId.begin(), cleanId.end(), ']'), cleanId.end());
+
+
+    if (cleanId.find("my5GNetwork:") == std::string::npos && cleanId != "server") {
+        cleanId = "my5GNetwork:" + cleanId;
     }
+
 
     // --- AJOUT DU DEBUG LOG ---
     if (thingIdToNode.count(cleanId)) {
@@ -592,12 +598,12 @@ int main(int argc, char *argv[]) {
     mobility.Install(remoteHost);
 
     // Positions initiales dynamiques
-    for (uint32_t i = 0; i < nGnbs; ++i) {
-        gnbNodes.Get(i)->GetObject<MobilityModel>()->SetPosition(Vector(500.0 + (i * 100), 500.0, 0.0));
-    }
-    for (uint32_t i = 0; i < nUes; ++i) {
-        ueNodes.Get(i)->GetObject<MobilityModel>()->SetPosition(Vector(510.0 + i, 510.0, 0.0));
-    }
+    // for (uint32_t i = 0; i < nGnbs; ++i) {
+    //     gnbNodes.Get(i)->GetObject<MobilityModel>()->SetPosition(Vector(726.0 + (i * 100), 277.0, 0.0));
+    // }
+    // for (uint32_t i = 0; i < nUes; ++i) {
+    //     ueNodes.Get(i)->GetObject<MobilityModel>()->SetPosition(Vector(510.0 + i, 510.0, 0.0));
+    // }
 
     // --- 4. DITTO MAPPING ---
     for (uint32_t i = 0; i < nGnbs; ++i) thingIdToNode[discoveredGnbs[i]] = gnbNodes.Get(i);
@@ -726,6 +732,8 @@ int main(int argc, char *argv[]) {
     //         }
     //     }
     // }
+
+    
 
     if (g_debugMode) {
         Simulator::Schedule(Seconds(1.0), &CheckInterfaceStatus, ueNodes.Get(0));
