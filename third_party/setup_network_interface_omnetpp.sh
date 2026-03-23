@@ -1,3 +1,6 @@
+
+
+
 #!/bin/bash
 
 # Check if the script is run as root
