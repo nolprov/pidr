@@ -7,7 +7,7 @@ import sys
 from datetime import datetime
 
 # --- CONFIGURATION ---
-GLOBAL_FREQ = 10  # 10Hz
+GLOBAL_FREQ = 10
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 JSON_PATH = os.path.join(SCRIPT_DIR, "..", "simulations", "network_state.json")
 IDS_LOG_PATH = os.path.join(SCRIPT_DIR, "..", "simulations", "sent_packet_ids.txt")

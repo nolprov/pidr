@@ -16,6 +16,7 @@ import simu5g.common.carrierAggregation.CarrierAggregation;
 import simu5g.nodes.Upf;
 import inet.common.misc.ThruputMeteringChannel;
 import simu5g.nodes.BackgroundCell;
+import inet.common.scenario.ScenarioManager; 
 
 import src.DTConnector;
 
@@ -79,11 +80,16 @@ network FiveGNetwork
             @display("p=50,300;is=s");
         }
 
+        scenarioManager: ScenarioManager { 
+            @display("p=50,350;is=s");
+        }
+
     connections:
         // Le Serveur se connecte à l'UPF (Gate 'filterGate')
         server.pppg++ <--> Eth10G <--> upf.filterGate;
         
         // L'UPF se connecte au gNodeB (Gate 'ppp')
         upf.pppg++ <--> Eth10G <--> gnb[0].ppp;
+
        
 }
