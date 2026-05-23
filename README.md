@@ -1,8 +1,6 @@
-# NDT Data Generation
+# Codebase NDT Data Generation
 
-DRL agent (PPO/CEM) that minimizes the fidelity gap between a 5G Physical Twin (OMNeT++) and its Digital Twin (ns-3 NR), synchronized via Eclipse Ditto.
-
-## Prerequisites
+## Requirements
 
 - Python 3.9+, `stable-baselines3`, `gymnasium` or `gym`
 - OMNeT++ 6 + INET + Simu5G (Physical Twin)
@@ -13,7 +11,7 @@ DRL agent (PPO/CEM) that minimizes the fidelity gap between a 5G Physical Twin (
 pip install stable-baselines3 gymnasium numpy
 ```
 
-## Install (full stack)
+## Installation (full stack)
 
 ```bash
 git clone https://github.com/AbdessamedSed/NDT_data_generation.git
@@ -24,7 +22,7 @@ chmod +x scripts/install_all_tools.sh
 
 Builds OMNeT++, INET, Simu5G, and ns-3 from the vendored sources in `external/`.
 
-## Run the full pipeline
+## Lancer le pipeline complet
 
 ```bash
 export OMNET_RUN_CMD='../FiveG_network -u Cmdenv -f omnetpp.ini -c DT-Scenario'
@@ -32,22 +30,11 @@ export NS3_RUN_CMD='/path/to/ns-3.40/ns3 run scratch/FiveG_digital_twin'
 ./scripts/run_full_pipeline.sh
 ```
 
-This starts OMNeT++ (PT), Eclipse Ditto, the synchronization bridges, and ns-3 (DT) in order.
+Cette commande lance OMNeT++ (PT), Eclipse Ditto, le pont de synchronisation et ns-3 (DT) dans cet ordre.
 
-## Agent training
+## Entraînement de l'agent
 
-### Offline (no simulators required)
-
-```bash
-python -m agent.train \
-  --backend offline \
-  --pt-history third_party/physical_twin_history.json \
-  --dt-history third_party/dt_collected_history.json \
-  --timesteps 100000 \
-  --results-dir results/
-```
-
-### With 5G3E dataset (real srsGNB traces)
+### Avec le dataset 5G3E (traces srsGNB réelles)
 
 ```bash
 python -m agent.train \
@@ -56,36 +43,33 @@ python -m agent.train \
   --timesteps 100000
 ```
 
-Use `--pt-5g3e-multi-site` with `--pt-5g3e` pointing to `RAN_level/` to train across all sites.
-
 ### Live (simulators running)
 
 ```bash
 python -m agent.train --backend live --timesteps 50000 --live-step-sleep 0.5
 ```
 
-### Warm start from checkpoint
+### Démarrage à chaud en reprenant le dernier checkpoint
 
 ```bash
 python -m agent.train --resume-from results/ppo_model_final.zip --timesteps 50000
 ```
 
-### Key flags
+### Arguments utiles
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--algo` | `auto` | `ppo`, `cem`, or `auto` |
-| `--timesteps` | 50000 | Total PPO steps |
-| `--episode-steps` | 64 | Steps per episode |
-| `--ppo-lr` | 3e-4 | Learning rate |
+| `--timesteps` | 50000 | Nombre total d'étapes |
+| `--episode-steps` | 64 | Étapes par épisode |
+| `--ppo-lr` | 3e-4 | Learning rate|
 | `--ppo-n-steps` | 256 | Rollout buffer size |
-| `--net-arch` | `128,128` | MLP hidden layers |
-| `--unsigned-obs` | off | Absolute instead of signed errors |
-| `--fix-param NAME=VAL` | — | Fix an action parameter (repeatable) |
-| `--reward-weight NAME=VAL` | — | Override a reward weight (repeatable) |
-| `--no-baselines` | off | Skip baseline computation |
+| `--net-arch` | `128,128` | Couches cachées MLP  |
+| `--unsigned-obs` | off | Erreurs en valeur absolue |
+| `--reward-weight NAME=VAL` | — | Remplacer le poids d'une reward |
+| `--no-baselines` | off | Ignore le calcul des baselines|
 
-## Apply best action to ns-3
+## Appliquer la meilleure action pour ns-3
 
 ```bash
 python scripts/tune_network_params.py \
@@ -93,36 +77,16 @@ python scripts/tune_network_params.py \
   --ns3-gnb-nf 5.0  --ns3-ue-nf 7.0
 ```
 
-Use `--dry-run` to preview without writing.
+Utiliser `--dry-run` pour prévisualiser sans écrire.
 
 ## Outputs
 
-Written to `--results-dir` (default: `results/`):
+Écrit dans `--results-dir` (default: `results/`):
 
 | File | Description |
 |------|-------------|
-| `learning_curve.csv` | Per-episode reward and metric breakdown |
-| `best_action.json` | Best action found, ready for ns-3 |
-| `baselines.json` | Default / random / grid scores |
-| `ppo_model_final.zip` | Final model (resumable with `--resume-from`) |
+| `learning_curve.csv` | Reward par épisode et par métriques |
+| `best_action.json` | Meilleure action trouvée, prêt pour ns-3 |
+| `baselines.json` | Scores par défaut / aléatoire |
+| `ppo_model_final.zip` | Modèle final (peut être appelé avec `--resume-from`) |
 
-## Project structure
-
-```
-agent/
-  train.py          training entry point (PPO + CEM)
-  env.py            Gym environment (offline + live backends)
-  baselines.py      default / random / grid baselines
-  state.py          PT/DT snapshot data structures
-  loaders/
-    physics.py      3GPP TR 38.901 UMa physics model
-    five_g3e.py     5G3E v2 dataset loader (srsGNB JSONL)
-scripts/
-  tune_network_params.py  apply action to OMNeT++ ini and ns-3 source
-  run_full_pipeline.sh    orchestrate full PT + Ditto + DT pipeline
-third_party/        recorded PT/DT snapshot histories and mock tools
-5G3E-dataset/       real srsGNB measurement traces
-omnet/              OMNeT++ Physical Twin project
-ns3/                ns-3 NR Digital Twin application
-ditto/              Eclipse Ditto configuration and bridges
-```
