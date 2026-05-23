@@ -11,17 +11,6 @@
 pip install stable-baselines3 gymnasium numpy
 ```
 
-## Installation (full stack)
-
-```bash
-git clone https://github.com/AbdessamedSed/NDT_data_generation.git
-cd NDT_data_generation
-chmod +x scripts/install_all_tools.sh
-./scripts/install_all_tools.sh
-```
-
-Builds OMNeT++, INET, Simu5G, and ns-3 from the vendored sources in `external/`.
-
 ## Lancer le pipeline complet
 
 ```bash
