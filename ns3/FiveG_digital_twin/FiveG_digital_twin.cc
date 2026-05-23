@@ -8,7 +8,7 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/netanim-module.h"
 #include "ns3/applications-module.h"
-#include "json/json.h"
+#include <nlohmann/json.hpp>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -16,28 +16,31 @@
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
-#include "ns3/nr-ue-rrc.h" 
+#include <chrono>
+#include <thread>
+#include <cstdlib>
+#include "ns3/lte-ue-rrc.h"
 #include "ns3/traffic-control-helper.h"
 #include "ns3/traffic-control-layer.h"
 #include "ns3/ipv4-interface.h"
 #include "ns3/arp-cache.h"
 #include "ns3/eps-bearer.h"
+#include "ns3/epc-tft.h"
 #include "ns3/nr-point-to-point-epc-helper.h"
-#include "ns3/nr-eps-bearer.h"
-#include "ns3/nr-epc-tft.h"
 #include "debug-functions.h"
 #include "metrics-calc.h"
 #include "ns3/nr-ue-net-device.h"
 #include "ns3/nr-ue-mac.h"
+#include "ns3/nr-ue-phy.h"
 #include "ns3/nr-gnb-net-device.h"
 #include "ns3/nr-gnb-mac.h"
+#include "ns3/nr-gnb-phy.h"
 #include "ns3/nr-bearer-stats-calculator.h"
-#include "ns3/nr-common.h"
 #include <set> 
 #include <cctype> 
 
 using namespace ns3;
-using namespace ns3::nr;
+using json = nlohmann::json;
 
 NS_LOG_COMPONENT_DEFINE("Ditto5GControl");
 
@@ -162,7 +165,13 @@ public:
         uint32_t nodeId = node->GetId();
         Ptr<MobilityModel> mobility = node->GetObject<MobilityModel>();
         if (mobility) {
-            mobility->SetPosition(Vector3D(x, y, z));
+            double safeZ = z;
+            if (cleanId.find("gnb") != std::string::npos) {
+                safeZ = std::max(z, 10.0);
+            } else {
+                safeZ = std::max(z, 1.5);
+            }
+            mobility->SetPosition(Vector3D(x, y, safeZ));
             table_radio_5g[nodeId].currentSpeed = speed; 
             std::cout << "\033[1;32m[MOBILITY-OK]\033[0m Node " << cleanId << " moved to (" << x << "," << y << ")" << std::endl;
         }
@@ -170,6 +179,22 @@ public:
         std::cout << "\033[1;31m[MOBILITY-ERROR]\033[0m ID received from PT '" << id << "' (cleaned as '" << cleanId << "') is NOT in thingIdToNode map!" << std::endl;
     }
 }
+
+    void SetGlobalTrafficParams(uint32_t pktSize, double intervalMs) {
+        for (auto& kv : m_flowApps) {
+            Ptr<Application> app = kv.second;
+            if (!app) continue;
+            app->SetAttribute("PacketSize", UintegerValue(pktSize));
+            app->SetAttribute("Interval", TimeValue(MilliSeconds(intervalMs)));
+            if (active_flows.count(kv.first)) {
+                active_flows[kv.first].packetSize = static_cast<int>(pktSize);
+                active_flows[kv.first].interval   = intervalMs / 1000.0;
+            }
+        }
+        std::cout << "\033[1;35m[TRAFFIC-UPDATE]\033[0m "
+                  << m_flowApps.size() << " flows → pkt=" << pktSize
+                  << "B  interval=" << intervalMs << "ms" << std::endl;
+    }
 
     Ipv4Address GetNodeIp(Ptr<Node> node) {
         Ptr<Ipv4> ipv4 = node->GetObject<Ipv4>();
@@ -276,12 +301,10 @@ public:
         m_file << "[\n";
         m_first = true;
     }
-    void LogSnapshot(const Json::Value& root) {
+    void LogSnapshot(const json& root) {
         if (!m_file.is_open()) return;
         if (!m_first) m_file << ",\n";
-        Json::StreamWriterBuilder builder;
-        builder["indentation"] = "  ";
-        m_file << Json::writeString(builder, root);
+        m_file << root.dump(2);
         m_first = false;
         m_file.flush();
     }
@@ -311,7 +334,9 @@ private:
     uint16_t m_port;
     Ptr<Socket> m_socket;
     std::string m_logFileName;
-    std::string m_bufferPath = "/dev/shm/ditto_buffer.json"; 
+    std::string m_bufferPath = "/dev/shm/ditto_buffer.json";
+    std::string m_lastBufferContent;
+    std::string m_lastActionContent;
     
     DittoLogger m_logger;       
 
@@ -321,6 +346,8 @@ private:
         m_socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
         m_socket->Bind(InetSocketAddress(Ipv4Address::GetAny(), m_port));
         m_socket->SetRecvCallback(MakeCallback(&DittoControllerApp::HandleRead, this));
+
+        Simulator::Schedule(Seconds(0.2), &DittoControllerApp::PollSharedBuffer, this);
         
        NS_LOG_INFO("[NS3] Ready. Waiting for UDP signals on port " << m_port << "...");
     }
@@ -347,46 +374,151 @@ private:
                 if (!jsonContent.empty()) {
                     NS_LOG_INFO("Signal received. Processing RAM buffer...");
                     ProcessJson(jsonContent); 
+                    m_lastBufferContent = jsonContent;
                 }
             }
         }
     }
 
-   void ProcessJson(std::string jsonStr) {
-    Json::Value root;
-    Json::CharReaderBuilder builder;
-    std::string errors;
-    std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+    void PollSharedBuffer() {
+        // 1. Process Ditto topology updates
+        std::ifstream ifs(m_bufferPath);
+        if (ifs.is_open()) {
+            std::stringstream ss;
+            ss << ifs.rdbuf();
+            std::string jsonContent = ss.str();
+            ifs.close();
 
-    if (!reader->parse(jsonStr.c_str(), jsonStr.c_str() + jsonStr.size(), &root, &errors)) return;
-
-    if (root.isArray()) {
-        for (const auto& item : root) {
-            std::string tid = item["thingId"].asString();
-            const Json::Value& attr = item["attributes"];
-
-            // 1. MOBILITY
-            if (attr.isMember("x")) {
-                g_handler.UpdateNodeMobility(tid, attr["x"].asDouble(), attr["y"].asDouble(), attr["z"].asDouble(), attr.get("speed", 0.0).asDouble());
+            if (!jsonContent.empty() && jsonContent != m_lastBufferContent) {
+                ProcessJson(jsonContent);
+                m_lastBufferContent = jsonContent;
             }
+        }
 
-            // 2. TRAFIC 
-            if (attr.isMember("src") && attr.isMember("dst")) {
+        // 2. Apply DRL agent action if available (/dev/shm/agent_action.json)
+        ApplyAgentAction();
 
-                double flowInt = attr.get("interval", 0.001).asDouble();
-                int pSize = attr.get("packet_size", 1000).asInt();
+        Simulator::Schedule(Seconds(0.5), &DittoControllerApp::PollSharedBuffer, this);
+    }
 
-                // FORCE l'affichage pour vérifier dans ta console
-                std::cout << std::fixed << std::setprecision(6); 
-                std::cout << "[DEBUG] Interval recu: " << flowInt << " s" << std::endl;
+    void ApplyAgentAction() {
+        const std::string actionPath = "/dev/shm/agent_action.json";
+        std::ifstream afs(actionPath);
+        if (!afs.is_open()) return;
 
-                g_handler.UpdateFlowParameters(tid, 
-                                            attr["src"].asString(), 
-                                            attr["dst"].asString(), 
-                                            pSize, 
-                                            flowInt);
-                    }
-        }   
+        std::stringstream ss;
+        ss << afs.rdbuf();
+        afs.close();
+        std::string content = ss.str();
+        if (content == m_lastActionContent) return;
+        m_lastActionContent = content;
+
+        json act;
+        try { act = json::parse(content); } catch (...) { return; }
+        if (!act.contains("action") || !act["action"].is_object()) return;
+        const auto& a = act["action"];
+
+        // --- gNB attributes ---
+        if (a.contains("ns3_gnb_tx_dbm") || a.contains("ns3_gnb_nf_db")) {
+            for (uint32_t i = 0; i < g_gnbDevs.GetN(); ++i) {
+                Ptr<NrGnbNetDevice> dev = DynamicCast<NrGnbNetDevice>(g_gnbDevs.Get(i));
+                if (!dev) continue;
+                for (uint32_t bwp = 0; bwp < dev->GetCcMapSize(); ++bwp) {
+                    Ptr<NrGnbPhy> phy = dev->GetPhy(bwp);
+                    if (!phy) continue;
+                    if (a.contains("ns3_gnb_tx_dbm"))
+                        phy->SetAttribute("TxPower", DoubleValue(a["ns3_gnb_tx_dbm"].get<double>()));
+                    if (a.contains("ns3_gnb_nf_db"))
+                        phy->SetAttribute("NoiseFigure", DoubleValue(a["ns3_gnb_nf_db"].get<double>()));
+                }
+            }
+        }
+        // --- UE attributes ---
+        if (a.contains("ns3_ue_tx_dbm") || a.contains("ns3_ue_nf_db")) {
+            for (uint32_t i = 0; i < g_ueDevs.GetN(); ++i) {
+                Ptr<NrUeNetDevice> dev = DynamicCast<NrUeNetDevice>(g_ueDevs.Get(i));
+                if (!dev) continue;
+                for (uint32_t bwp = 0; bwp < dev->GetCcMapSize(); ++bwp) {
+                    Ptr<NrUePhy> phy = dev->GetPhy(bwp);
+                    if (!phy) continue;
+                    if (a.contains("ns3_ue_tx_dbm"))
+                        phy->SetAttribute("TxPower", DoubleValue(a["ns3_ue_tx_dbm"].get<double>()));
+                    if (a.contains("ns3_ue_nf_db"))
+                        phy->SetAttribute("NoiseFigure", DoubleValue(a["ns3_ue_nf_db"].get<double>()));
+                }
+            }
+        }
+        // --- Snapshot interval ---
+        if (a.contains("ns3_snapshot_s")) {
+            double newInterval = a["ns3_snapshot_s"].get<double>();
+            if (newInterval > 0.0) g_snapshotInterval = newInterval;
+        }
+        // --- Traffic parameters (packet size + inter-packet interval) ---
+        if (a.contains("ns3_pkt_size_bytes") || a.contains("ns3_pkt_interval_ms")) {
+            uint32_t pktSize   = a.contains("ns3_pkt_size_bytes")
+                                     ? static_cast<uint32_t>(a["ns3_pkt_size_bytes"].get<double>())
+                                     : 1400u;
+            double intervalMs  = a.contains("ns3_pkt_interval_ms")
+                                     ? a["ns3_pkt_interval_ms"].get<double>()
+                                     : 10.0;
+            if (pktSize   < 1)    pktSize   = 1;
+            if (pktSize   > 65507) pktSize   = 65507;
+            if (intervalMs < 0.1) intervalMs = 0.1;
+            g_handler.SetGlobalTrafficParams(pktSize, intervalMs);
+        }
+
+        std::cout << "\033[1;35m[AGENT-ACTION]\033[0m Applied at t="
+                  << Simulator::Now().GetSeconds() << "s: " << a.dump() << std::endl;
+    }
+
+   void ProcessJson(std::string jsonStr) {
+    json root;
+    try {
+        root = json::parse(jsonStr);
+    } catch (const std::exception&) {
+        return;
+    }
+
+    if (!root.is_array()) {
+        return;
+    }
+
+    m_logger.LogSnapshot(root);
+
+    for (const auto& item : root) {
+        if (!item.contains("thingId") || !item["thingId"].is_string()) {
+            continue;
+        }
+        std::string tid = item["thingId"].get<std::string>();
+
+        if (!item.contains("attributes") || !item["attributes"].is_object()) {
+            continue;
+        }
+        const auto& attr = item["attributes"];
+
+        // 1. MOBILITY
+        if (attr.contains("x")) {
+            g_handler.UpdateNodeMobility(tid,
+                                         attr.value("x", 0.0),
+                                         attr.value("y", 0.0),
+                                         attr.value("z", 0.0),
+                                         attr.value("speed", 0.0));
+        }
+
+        // 2. TRAFIC
+        if (attr.contains("src") && attr.contains("dst")) {
+            double flowInt = attr.value("interval", 0.001);
+            int pSize = attr.value("packet_size", 1000);
+
+            std::cout << std::fixed << std::setprecision(6);
+            std::cout << "[DEBUG] Interval recu: " << flowInt << " s" << std::endl;
+
+            g_handler.UpdateFlowParameters(tid,
+                                           attr.value("src", std::string()),
+                                           attr.value("dst", std::string()),
+                                           pSize,
+                                           flowInt);
+        }
     }
 }
 };
@@ -509,21 +641,25 @@ void PreParseInitialEntities(std::string filePath, std::vector<std::string>& ueL
         return;
     }
 
-    Json::Value root;
-    Json::CharReaderBuilder builder;
-    std::string errors;
+    json root;
     
     std::set<std::string> uniqueUes;
     std::set<std::string> uniqueGnbs;
 
-    if (Json::parseFromStream(builder, ifs, &root, &errors)) {
-        if (root.isArray()) {
+    try {
+        ifs >> root;
+    } catch (const std::exception&) {
+        ifs.close();
+        return;
+    }
+
+    if (root.is_array()) {
             std::cout << "\033[1;34m[PRE-PARSE] Starting Strict JSON scan...\033[0m" << std::endl;
             
             for (const auto& item : root) {
-                if (!item.isMember("thingId")) continue;
+                if (!item.contains("thingId") || !item["thingId"].is_string()) continue;
                 
-                std::string tid = item["thingId"].asString();
+                std::string tid = item["thingId"].get<std::string>();
 
                 // --- 1. STRICT UE FILTER ---
                 // Must start with "my5GNetwork:ue"
@@ -540,11 +676,15 @@ void PreParseInitialEntities(std::string filePath, std::vector<std::string>& ueL
                     }
                 } 
                 // --- 2. STRICT GNB FILTER ---
-                // Must start with "my5GNetwork:gnb"
+                // Must start with "my5GNetwork:gnb" AND be followed by a digit
+                // ("my5GNetwork:gnb" alone is rejected — bug fix for double-creation)
                 else if (tid.find("my5GNetwork:gnb") == 0 && tid.find("_to_") == std::string::npos) {
-                    if (uniqueGnbs.find(tid) == uniqueGnbs.end()) {
-                        uniqueGnbs.insert(tid);
-                        std::cout << "  [NODE] Found Physical gNB: " << tid << std::endl;
+                    // "my5GNetwork:gnb" is 15 characters long
+                    if (tid.length() > 15 && std::isdigit(tid[15])) {
+                        if (uniqueGnbs.find(tid) == uniqueGnbs.end()) {
+                            uniqueGnbs.insert(tid);
+                            std::cout << "  [NODE] Found Physical gNB: " << tid << std::endl;
+                        }
                     }
                 }
                 else {
@@ -552,7 +692,6 @@ void PreParseInitialEntities(std::string filePath, std::vector<std::string>& ueL
                     // std::cout << "  [IGNORE] Skipping Flow/Object: " << tid << std::endl;
                 }
             }
-        }
     }
     ifs.close();
 
@@ -568,16 +707,54 @@ void PreParseInitialEntities(std::string filePath, std::vector<std::string>& ueL
 // 4. MAIN
 // ===========================================================================
 int main(int argc, char *argv[]) {
+    // --- 0. WAIT FOR DITTO BRIDGE READINESS ---
+    // Both omnet_to_ditto_sync and ditto_ns3_sender create this sentinel
+    // once they have written their first valid payload. Without this wait
+    // ns-3 used to start with an empty buffer and fall back to a single UE.
+    const std::string readyFile = "/dev/shm/ditto_buffer.ready";
+    const std::string configPath = "/dev/shm/ditto_buffer.json";
+    int readyTimeoutSec = 60;
+    if (const char* envTimeout = std::getenv("NS3_READY_TIMEOUT")) {
+        try { readyTimeoutSec = std::max(1, std::stoi(envTimeout)); } catch (...) {}
+    }
+    {
+        std::cout << "[NS3] Waiting for Ditto bridge readiness (max "
+                  << readyTimeoutSec << "s)..." << std::endl;
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(readyTimeoutSec);
+        bool ready = false;
+        while (std::chrono::steady_clock::now() < deadline) {
+            std::ifstream rf(readyFile);
+            std::ifstream cf(configPath);
+            if (rf.good() && cf.good() && cf.peek() != EOF) { ready = true; break; }
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+        if (!ready) {
+            std::cout << "[NS3] WARNING: Ditto bridge not ready after timeout — falling back to defaults." << std::endl;
+        } else {
+            std::cout << "[NS3] Bridge ready, proceeding to pre-parse entities." << std::endl;
+        }
+    }
+
+    // --- 0b. RESOLVE OUTPUT FILE PATH ----------------------------------------
+    // If NS3_OUTPUT_DIR is set (by run_full_pipeline.sh) write snapshots there
+    // so the agent can find them regardless of where the ns3 binary runs from.
+    {
+        const char* outDir = std::getenv("NS3_OUTPUT_DIR");
+        if (outDir && std::string(outDir).length() > 0) {
+            g_outputFile = std::string(outDir) + "/ns3_received_history.json";
+        }
+        std::cout << "[NS3] Snapshot output: " << g_outputFile << std::endl;
+    }
+
     // --- 1. DYNAMIC DETECTION OF UEs and GNBs (Ditto/RAM Buffer) ---
     std::vector<std::string> discoveredUes;
     std::vector<std::string> discoveredGnbs;
-    
-    std::string configPath = "/dev/shm/ditto_buffer.json"; 
+
     PreParseInitialEntities(configPath, discoveredUes, discoveredGnbs);
 
     // Fallback par défaut
     if (discoveredUes.empty()) discoveredUes.push_back("my5GNetwork:ue0");
-    if (discoveredGnbs.empty()) discoveredGnbs.push_back("my5GNetwork:gnb");
+    if (discoveredGnbs.empty()) discoveredGnbs.push_back("my5GNetwork:gnb0");
 
     uint32_t nUes = discoveredUes.size();
     uint32_t nGnbs = discoveredGnbs.size();
@@ -597,12 +774,19 @@ int main(int argc, char *argv[]) {
     mobility.Install(ueNodes); 
     mobility.Install(remoteHost);
 
+    for (uint32_t i = 0; i < nGnbs; ++i) {
+        gnbNodes.Get(i)->GetObject<MobilityModel>()->SetPosition(Vector(726.0 + (i * 50.0), 277.0, 10.0));
+    }
+    for (uint32_t i = 0; i < nUes; ++i) {
+        ueNodes.Get(i)->GetObject<MobilityModel>()->SetPosition(Vector(850.0 + (i * 5.0), 850.0, 1.5));
+    }
+
     // Positions initiales dynamiques
     // for (uint32_t i = 0; i < nGnbs; ++i) {
     //     gnbNodes.Get(i)->GetObject<MobilityModel>()->SetPosition(Vector(726.0 + (i * 100), 277.0, 0.0));
     // }
     // for (uint32_t i = 0; i < nUes; ++i) {
-    //     ueNodes.Get(i)->GetObject<MobilityModel>()->SetPosition(Vector(510.0 + i, 510.0, 0.0));
+    //     ueNodes.Get(i)->GetObject<MobilityModel>()->SetPosition(Vector(200.0 + (i * 60.0), 480.0 + (i * 0.0), 1.5));
     // }
 
     // --- 4. DITTO MAPPING ---
@@ -629,7 +813,7 @@ int main(int argc, char *argv[]) {
     tapBridge.Install(tapNodes.Get(0), csmaDevs.Get(0));
 
     Ptr<DittoControllerApp> dittoApp = CreateObject<DittoControllerApp>();
-    dittoApp->Setup(5000, "ns3_received_history.json");
+    dittoApp->Setup(5000, "ns3_ditto_raw.json");
     tapNodes.Get(1)->AddApplication(dittoApp);
     dittoApp->SetStartTime(Seconds(0.1));
 
@@ -637,7 +821,7 @@ int main(int argc, char *argv[]) {
     Ptr<NrHelper> nrHelper = CreateObject<NrHelper>();
     nrHelper->SetEpcHelper(epcHelper);
 
-    nrHelper->SetGnbPhyAttribute("TxPower", DoubleValue(46.0));
+    nrHelper->SetGnbPhyAttribute("TxPower", DoubleValue(43.0));
 
     nrHelper->SetUePhyAttribute("TxPower", DoubleValue(23.0));
 
@@ -657,9 +841,7 @@ int main(int argc, char *argv[]) {
     CcBwpCreator ccBwpCreator;
     CcBwpCreator::SimpleOperationBandConf bandConf(3.5e9, 100e6, 1);
     OperationBandInfo band = ccBwpCreator.CreateOperationBandContiguousCc(bandConf);
-    Ptr<NrChannelHelper> channelHelper = CreateObject<NrChannelHelper>();
-    channelHelper->ConfigureFactories("UMa", "Default", "ThreeGpp");
-    channelHelper->AssignChannelsToBands({band});
+    nrHelper->InitializeOperationBand(&band);
 
     // Installation des couches Internet (GNB, UE, RemoteHost)
     InternetStackHelper internet5G;
@@ -670,17 +852,33 @@ int main(int argc, char *argv[]) {
     // Installation des terminaux 5G
     NetDeviceContainer gnbDevs = nrHelper->InstallGnbDevice(gnbNodes, CcBwpCreator::GetAllBwps({band}));
     NetDeviceContainer ueDevs = nrHelper->InstallUeDevice(ueNodes, CcBwpCreator::GetAllBwps({band}));
+
+    for (auto it = gnbDevs.Begin(); it != gnbDevs.End(); ++it) {
+        DynamicCast<NrGnbNetDevice>(*it)->UpdateConfig();
+    }
+    for (auto it = ueDevs.Begin(); it != ueDevs.End(); ++it) {
+        DynamicCast<NrUeNetDevice>(*it)->UpdateConfig();
+    }
+
+    // Expose devices globally so ApplyAgentAction() can update PHY params at runtime.
+    g_gnbDevs = gnbDevs;
+    g_ueDevs  = ueDevs;
     
     // IP et Attachement
     epcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
-    nrHelper->AttachToClosestGnb(ueDevs, gnbDevs);
+    nrHelper->AttachToClosestEnb(ueDevs, gnbDevs);
 
-    // --- 7. BEARER ACTIVATION (Une seule boucle propre) ---
+    // --- 7. BEARER ACTIVATION + IMSI <-> nodeId mapping ---
+    g_ueImsiNodeIds.clear();
+    imsi_to_nodeid.clear();
     for (uint32_t i = 0; i < ueDevs.GetN(); ++i) {
         Ptr<NrUeNetDevice> nrUeDev = ueDevs.Get(i)->GetObject<NrUeNetDevice>();
         uint64_t imsi = nrUeDev->GetImsi();
-        epcHelper->ActivateEpsBearer(ueDevs.Get(i), imsi, Create<NrEpcTft>(), 
-                                    NrEpsBearer(NrEpsBearer::NGBR_VIDEO_TCP_DEFAULT));
+        uint32_t nodeId = ueNodes.Get(i)->GetId();
+        g_ueImsiNodeIds.emplace_back(imsi, nodeId);
+        imsi_to_nodeid[imsi] = nodeId;
+        epcHelper->ActivateEpsBearer(ueDevs.Get(i), imsi, Create<EpcTft>(),
+                         EpsBearer(EpsBearer::NGBR_VIDEO_TCP_DEFAULT));
     }
 
     // --- 8. METRICS & TRACES (Connexion finale) ---

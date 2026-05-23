@@ -33,3 +33,23 @@ bin/
 # --- Editeurs ---
 .vscode/
 *~
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+
+# --- LaTeX build artifacts ---
+*.aux
+*.log
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.out
+*.toc
+
+# --- Documents locaux (ne pas committer) ---
+*.tex
+*.pdf
+*.md
+!README.md

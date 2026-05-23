@@ -117,9 +117,13 @@ void TraceUeMacTx(uint32_t nodeId, Ptr<const Packet> packet) {
     std::cout << "\033[1;33m[UE-TX]\033[0m Node " << nodeId << " sends a packet of " << packet->GetSize() << " bytes" << std::endl;
 }
 
-void OnRrcStateChange(uint32_t nodeId, uint64_t imsi, uint16_t cellId, uint16_t rnti, NrUeRrc::State oldState, NrUeRrc::State newState) {
-    // Dans ns-3.46 NR, l'état s'appelle RRC_CONNECTED
-    if (newState == NrUeRrc::CONNECTED_NORMALLY) {
+void OnRrcStateChange(uint32_t nodeId,
+                      uint64_t imsi,
+                      uint16_t cellId,
+                      uint16_t rnti,
+                      LteUeRrc::State oldState,
+                      LteUeRrc::State newState) {
+    if (newState == LteUeRrc::CONNECTED_NORMALLY) {
         rnti_to_nodeid[rnti] = nodeId; 
         table_radio_5g[nodeId].servingGnb = "gnb:" + std::to_string(cellId);
 

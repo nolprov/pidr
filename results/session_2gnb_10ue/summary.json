@@ -1,0 +1,19 @@
+{
+  "session": "session_2gnb_10ue",
+  "date": "2026-05-12",
+  "topology": "2 gNB + 10 UE \u2013 5G NR 3.5 GHz 100 MHz",
+  "n_snapshots_pt": 500,
+  "n_snapshots_dt": 500,
+  "baseline_default": -45.781,
+  "baseline_grid": -43.512,
+  "cem_best_reward": -43.512,
+  "ppo_best_reward": -43.5122,
+  "cem_iters": 50,
+  "cem_pop": 30,
+  "ppo_timesteps": 100000,
+  "ppo_episodes": 784,
+  "gap_thr_pct": -95.4,
+  "gap_sinr_ul_db": 3.86,
+  "gap_sinr_dl_db": 0.0,
+  "improvement_vs_default": 2.269
+}

@@ -1,0 +1,108 @@
+{
+  "session": "session_live_2gnb_10ue",
+  "date": "2026-05-12",
+  "backend": "live",
+  "topology": {
+    "n_gnb": 2,
+    "n_ue": 10,
+    "gnb_spacing_m": 400,
+    "carrier_ghz": 3.5,
+    "bandwidth_mhz": 100,
+    "path_loss_model": "3GPP TR 38.901 UMa"
+  },
+  "pt_params": {
+    "gnb_tx_dbm": 43.0,
+    "ue_tx_dbm": 23.0,
+    "gnb_nf_db": 5.0,
+    "ue_nf_db": 7.0,
+    "pkt_size_bytes": 1400,
+    "pkt_interval_ms": 10.0,
+    "app_rate_mbps": 1.12
+  },
+  "dt_initial_params": {
+    "gnb_tx_dbm": 46.0,
+    "ue_tx_dbm": 23.0,
+    "gnb_nf_db": 9.0,
+    "ue_nf_db": 5.0,
+    "pkt_size_bytes": 512,
+    "pkt_interval_ms": 80.0,
+    "app_rate_mbps": 0.051
+  },
+  "training": {
+    "algo": "PPO",
+    "total_timesteps": 50000,
+    "episode_steps": 64,
+    "total_episodes": 784,
+    "duration_s": 199,
+    "n_steps": 256,
+    "batch_size": 64,
+    "lr": 0.0003,
+    "ent_coef": 0.01,
+    "net_arch": [128, 128]
+  },
+  "results": {
+    "initial_reward_mean_10ep": -36.923,
+    "initial_reward_std_10ep": 1.712,
+    "final_reward_mean_20ep": -13.985,
+    "final_reward_std_20ep": 0.669,
+    "best_reward": -12.058,
+    "best_reward_episode": 753,
+    "reward_improvement_pct": 62.1,
+    "convergence_episode": 56
+  },
+  "component_errors": {
+    "initial_10ep": {
+      "throughput_mbps": 0.9254,
+      "sinr_dl_db": 0.4295,
+      "sinr_ul_db": 6.5904,
+      "delay_ms": 0.7125,
+      "bler_pct": 2.5747
+    },
+    "final_20ep": {
+      "throughput_mbps": 0.5138,
+      "sinr_dl_db": 0.3708,
+      "sinr_ul_db": 1.0430,
+      "delay_ms": 0.4813,
+      "bler_pct": 2.3343
+    },
+    "reduction_pct": {
+      "throughput_mbps": 44.5,
+      "sinr_dl_db": 13.7,
+      "sinr_ul_db": 84.2,
+      "delay_ms": 32.5,
+      "bler_pct": 9.3
+    }
+  },
+  "reward_weights": {
+    "throughput_mbps": 0.15,
+    "sinr_dl": 0.05,
+    "sinr_ul": 0.05,
+    "delay_ms": 0.05,
+    "bler_pct": 0.02
+  },
+  "best_action": {
+    "ns3_gnb_tx_dbm": 49.0,
+    "ns3_ue_tx_dbm": 26.0,
+    "ns3_gnb_nf_db": 9.0,
+    "ns3_ue_nf_db": 3.0,
+    "ns3_pkt_size_bytes": 770.5,
+    "ns3_pkt_interval_ms": 5.0,
+    "implied_app_rate_mbps": 1.233
+  },
+  "best_action_vs_pt": {
+    "gnb_tx_dbm_delta": 6.0,
+    "ue_tx_dbm_delta": 3.0,
+    "gnb_nf_db_delta": 4.0,
+    "ue_nf_db_delta": -4.0,
+    "pkt_size_bytes_delta": -629.5,
+    "pkt_interval_ms_delta": -5.0
+  },
+  "simulator": "third_party/mock_live_simulator.py",
+  "files": {
+    "learning_curve": "learning_curve.csv",
+    "annotated_curve": "ppo_live_annotated.csv",
+    "best_action": "best_action.json",
+    "ppo_model": "ppo_model_final.zip",
+    "report": "rapport_session_live_2gnb_10ue.md"
+  }
+}

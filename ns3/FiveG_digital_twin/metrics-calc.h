@@ -11,7 +11,6 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/netanim-module.h"
 #include "ns3/applications-module.h"
-#include "json/json.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -19,15 +18,14 @@
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
-#include "ns3/nr-ue-rrc.h" 
+#include "ns3/lte-ue-rrc.h"
 #include "ns3/traffic-control-helper.h"
 #include "ns3/traffic-control-layer.h"
 #include "ns3/ipv4-interface.h"
 #include "ns3/arp-cache.h"
 #include "ns3/eps-bearer.h"
+#include "ns3/epc-tft.h"
 #include "ns3/nr-point-to-point-epc-helper.h"
-#include "ns3/nr-eps-bearer.h"
-#include "ns3/nr-epc-tft.h"
 #include "ns3/core-module.h"
 #include "ns3/nr-gnb-mac.h"
 #include "ns3/nr-phy-mac-common.h" 
@@ -69,6 +67,17 @@ extern std::map<uint32_t, UeRadioTable> table_radio_5g;
 extern std::map<uint16_t, uint32_t> rnti_to_nodeid;
 extern std::map<std::string, FlowInfo> active_flows;
 
+// Installed NR devices — populated in main() so the live action reader
+// inside DittoControllerApp can update TxPower/NoiseFigure at runtime.
+extern NetDeviceContainer g_gnbDevs;
+extern NetDeviceContainer g_ueDevs;
+
+// Real IMSI <-> nodeId mapping (populated when bearers are activated). The
+// previous code used the formula imsi = i + 2 + nGnbs which broke as soon as
+// the topology had more than one gNB.
+extern std::map<uint64_t, uint32_t> imsi_to_nodeid;
+extern std::vector<std::pair<uint64_t, uint32_t>> g_ueImsiNodeIds;
+
 
 extern std::map<uint16_t, uint32_t> g_dlAck;
 extern std::map<uint16_t, uint32_t> g_dlNack;
@@ -81,11 +90,21 @@ extern std::map<uint16_t, uint32_t> g_ulNack;
 
 void TraceMacDlThroughput(uint32_t nodeId, Ptr<const Packet> packet);
 // void ComputeThroughput();
-void UpdateDlSinrTable(uint32_t nodeId, uint16_t cellId, uint16_t rnti, double sinr, uint16_t bwpId);
+void UpdateDlSinrTable(uint32_t nodeId,
+                       uint16_t cellId,
+                       uint16_t rnti,
+                       double sinr,
+                       uint16_t bwpId,
+                       uint8_t streamId);
 void UpdateUlSinrTable(uint64_t rnti, SpectrumValue& sinr, SpectrumValue& interference);
 void TracePhyStatsDl(uint32_t nodeId, uint16_t rnti, uint16_t bwpId, uint32_t nCbs, uint32_t nPassedCbs);
 void TracePhyStatsUl(uint16_t rnti, uint16_t bwpId, uint32_t nCbs, uint32_t nPassedCbs);
-void OnRrcStateChange(uint32_t nodeId, uint64_t imsi, uint16_t cellId, uint16_t rnti, NrUeRrc::State oldState, NrUeRrc::State newState);
+void OnRrcStateChange(uint32_t nodeId,
+                      uint64_t imsi,
+                      uint16_t cellId,
+                      uint16_t rnti,
+                      LteUeRrc::State oldState,
+                      LteUeRrc::State newState);
 void ComputeThroughput(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes);
 void ComputeLatency(Ptr<NrHelper> nrHelper, uint32_t nGnbs, uint32_t nUes);
 void ComputeDistance(Ptr<NrHelper> nrHelper, NodeContainer gnbNodes, uint32_t nGnbs, uint32_t nUes);

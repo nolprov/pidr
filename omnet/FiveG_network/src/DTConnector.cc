@@ -125,9 +125,9 @@ void DTConnector::initialize()
             << "posx_src,posy_src,posz_src,posx_dest,posy_dest,posz_dest,"
             << "traffic_type,packet_size,interval,"
             << "serving_gnb,distance,"
-            << "sinr_dl,sinr_ul"
-            << "mac_thr_dl,mac_thr_ul,mac_delay_dl,mac_delay_ul,blerDlSignal,blerUlSignal,packetLossDlSignal,packetLossUlSignal,"
-            // << "bufferOverflowDlSignal,bufferOverflowUlSignal"
+            << "sinr_dl,sinr_ul,"
+            << "mac_thr_dl,mac_thr_ul,mac_delay_dl,mac_delay_ul,"
+            << "bler_dl,bler_ul,packet_loss_dl,packet_loss_ul"
             << "\n";
     csvFile.flush();
 
@@ -196,7 +196,10 @@ std::string DTConnector::getServingGnbId(const std::string& nodeName) {
 
     if (macModule) {
         auto* macBase = dynamic_cast<simu5g::LteMacBase*>(macModule);
-        if (macBase) return "gnb" + std::to_string((unsigned int)macBase->getMacCellId());
+        if (macBase) {
+            unsigned int cellId = (unsigned int)macBase->getMacCellId();
+            return "gnb" + std::to_string(cellId > 0 ? cellId - 1 : 0);
+        }
     }
     return "unknown";
 }
@@ -412,23 +415,33 @@ void DTConnector::exportData()
             delay = lastMacDelayUl[ueIdx];
             bler = lastBlerUl[ueIdx];
             loss = lastPacketLossUl[ueIdx];
-        } else { 
+        } else {
             thr = lastMacThrDl[ueIdx];
             delay = lastMacDelayDl[ueIdx];
             bler = lastBlerDl[ueIdx];
             loss = lastPacketLossDl[ueIdx];
         }
 
+        // Unit alignment with the digital twin (ns-3):
+        //   throughput: LteHarqBufferRx emits bytes/s (totalRcvdBytes_/time),
+        //               so the correct conversion is bytes/s * 8 / 1e6 = Mbps.
+        //               The previous / 1e6 alone gave MB/s, understating by 8×.
+        //   delay:      seconds -> ms
+        //   bler:       ratio  -> percent
+        double thrMbps = (thr * 8.0) / 1e6;
+        double delayMs = delay * 1000.0;
+        double blerPct = bler * 100.0;
+
         jsonFile << "      { "
                  << "\"type\": \"" << activeFlows[k].type << "\", "
                  << "\"src\": \"" << activeFlows[k].srcName << "\", "
                  << "\"dst\": \"" << activeFlows[k].dstName << "\", "
-                 << "\"app\": \"" << activeFlows[k].type << "\", " 
+                 << "\"app\": \"" << activeFlows[k].type << "\", "
                  << "\"packet_size\": " << activeFlows[k].packetSize << ", "
                  << "\"interval\": " << activeFlows[k].interval << ", "
-                 << "\"throughput\": " << thr << ", "
-                 << "\"delay\": " << delay << ", "
-                 << "\"bler\": " << bler << ", "
+                 << "\"throughput\": " << thrMbps << ", "
+                 << "\"delay\": " << delayMs << ", "
+                 << "\"bler\": " << blerPct << ", "
                  << "\"packet_loss\": " << loss
                  << " }";
     }

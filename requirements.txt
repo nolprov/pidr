@@ -1,0 +1,8 @@
+requests>=2.31.0
+scapy>=2.5.0
+posix_ipc>=1.1.1
+
+# DRL agent
+numpy>=1.26.0
+gymnasium>=0.29.0
+stable-baselines3>=2.3.0 ; python_version < "3.13"

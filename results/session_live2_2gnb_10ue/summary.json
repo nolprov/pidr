@@ -1,0 +1,121 @@
+{
+  "session": "session_live2_2gnb_10ue",
+  "date": "2026-05-13",
+  "backend": "live",
+  "changes_vs_session_live1": {
+    "sinr_ul_weight": "0.05 → 0.10",
+    "total_timesteps": "50k → 100k",
+    "obs_type": "absolute → signed (PT-DT)",
+    "step_live_order": "sleep-after-read → sleep-before-read (race condition fix)"
+  },
+  "topology": {
+    "n_gnb": 2,
+    "n_ue": 10,
+    "gnb_spacing_m": 400,
+    "carrier_ghz": 3.5,
+    "bandwidth_mhz": 100,
+    "path_loss_model": "3GPP TR 38.901 UMa"
+  },
+  "pt_params": {
+    "gnb_tx_dbm": 43.0,
+    "ue_tx_dbm": 23.0,
+    "gnb_nf_db": 5.0,
+    "ue_nf_db": 7.0,
+    "pkt_size_bytes": 1400,
+    "pkt_interval_ms": 10.0,
+    "app_rate_mbps": 1.12
+  },
+  "dt_initial_params": {
+    "gnb_tx_dbm": 46.0,
+    "ue_tx_dbm": 23.0,
+    "gnb_nf_db": 9.0,
+    "ue_nf_db": 5.0,
+    "pkt_size_bytes": 512,
+    "pkt_interval_ms": 80.0,
+    "app_rate_mbps": 0.051
+  },
+  "training": {
+    "algo": "PPO",
+    "total_timesteps": 100000,
+    "episode_steps": 64,
+    "total_episodes": 1564,
+    "duration_s": 393,
+    "n_steps": 256,
+    "batch_size": 64,
+    "lr": 0.0003,
+    "ent_coef": 0.01,
+    "net_arch": [128, 128]
+  },
+  "reward_weights": {
+    "sinr_dl": 0.05,
+    "sinr_ul": 0.10,
+    "throughput_mbps": 0.15,
+    "delay_ms": 0.05,
+    "bler_pct": 0.02
+  },
+  "results": {
+    "initial_reward_mean_10ep": -58.588,
+    "initial_reward_std_10ep": 1.831,
+    "final_reward_mean_20ep": -16.915,
+    "final_reward_std_20ep": 1.083,
+    "best_reward": -14.634,
+    "best_reward_episode": 1440,
+    "reward_improvement_pct": 71.1,
+    "convergence_episode": 102
+  },
+  "component_errors": {
+    "initial_10ep": {
+      "throughput_mbps": 0.9317,
+      "sinr_dl_db": 0.4433,
+      "sinr_ul_db": 6.6768,
+      "delay_ms": 0.6929,
+      "bler_pct": 2.559
+    },
+    "final_20ep": {
+      "throughput_mbps": 0.4782,
+      "sinr_dl_db": 0.3705,
+      "sinr_ul_db": 0.9500,
+      "delay_ms": 0.7289,
+      "bler_pct": 2.1301
+    },
+    "reduction_pct": {
+      "throughput_mbps": 48.7,
+      "sinr_dl_db": 16.4,
+      "sinr_ul_db": 85.8,
+      "delay_ms": -5.2,
+      "bler_pct": 16.8
+    }
+  },
+  "best_action": {
+    "ns3_gnb_tx_dbm": 49.0,
+    "ns3_ue_tx_dbm": 26.0,
+    "ns3_gnb_nf_db": 9.0,
+    "ns3_ue_nf_db": 3.008,
+    "ns3_pkt_size_bytes": 474.4,
+    "ns3_pkt_interval_ms": 5.0,
+    "implied_app_rate_mbps": 0.759
+  },
+  "best_action_vs_pt": {
+    "gnb_tx_dbm_delta": 6.0,
+    "ue_tx_dbm_delta": 3.0,
+    "gnb_nf_db_delta": 4.0,
+    "ue_nf_db_delta": -3.992,
+    "pkt_size_bytes_delta": -925.6,
+    "pkt_interval_ms_delta": -5.0
+  },
+  "comparison_vs_live1": {
+    "sinr_ul_err_final_db": {"live1": 1.043, "live2": 0.950, "delta": -0.093},
+    "throughput_err_final_mbps": {"live1": 0.514, "live2": 0.478, "delta": -0.036},
+    "reward_improvement_pct": {"live1": 62.1, "live2": 71.1},
+    "total_episodes": {"live1": 784, "live2": 1564},
+    "note": "Rewards not directly comparable (weight change doubles sinr_ul contribution)"
+  },
+  "simulator": "third_party/mock_live_simulator.py",
+  "files": {
+    "learning_curve": "learning_curve.csv",
+    "annotated_curve": "ppo_live2_annotated.csv",
+    "best_action": "best_action.json",
+    "ppo_model": "ppo_model_final.zip",
+    "report": "rapport_session_live2_2gnb_10ue.md"
+  }
+}

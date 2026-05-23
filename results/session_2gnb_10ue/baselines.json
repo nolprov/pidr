@@ -1,0 +1,41 @@
+[
+  {
+    "name": "default",
+    "mean_reward": -45.78064036666667,
+    "std_reward": 0.36725450405525173,
+    "component_means": {
+      "sinr_dl": 0.0015705729166666724,
+      "sinr_ul": 3.9306959635416665,
+      "throughput_mbps": 1.06857359375,
+      "delay_ms": 0.01118296875,
+      "bler_pct": 0.010136927083333356
+    },
+    "n_episodes": 3
+  },
+  {
+    "name": "random",
+    "mean_reward": -45.78064036666667,
+    "std_reward": 0.36725450405525173,
+    "component_means": {
+      "sinr_dl": 0.0015705729166666724,
+      "sinr_ul": 3.9306959635416665,
+      "throughput_mbps": 1.06857359375,
+      "delay_ms": 0.01118296875,
+      "bler_pct": 0.010136927083333356
+    },
+    "n_episodes": 3
+  },
+  {
+    "name": "grid_best",
+    "mean_reward": -43.5119663,
+    "std_reward": 0.8411034695455871,
+    "component_means": {
+      "sinr_dl": 0.001593203125000023,
+      "sinr_ul": 3.5832709375,
+      "throughput_mbps": 1.0679603125,
+      "delay_ms": 0.006751406249999993,
+      "bler_pct": 0.00812062500000002
+    },
+    "n_episodes": 2187
+  }
+]

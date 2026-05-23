@@ -1,0 +1,356 @@
+{
+  "nodes": [
+    {
+      "id": "gnb0",
+      "x": 300.0,
+      "y": 500.0,
+      "z": 25.0,
+      "speed": 0.0,
+      "angle": 0.0,
+      "serving_gnb": "unknown",
+      "sinr_dl": -999,
+      "sinr_ul": -999,
+      "sinr_d2d": -999,
+      "constraints": {
+        "min_x": "0m",
+        "max_x": "1000m",
+        "min_y": "0m",
+        "max_y": "1000m",
+        "min_z": "0m",
+        "max_z": "0m"
+      }
+    },
+    {
+      "id": "gnb1",
+      "x": 300.0,
+      "y": 500.0,
+      "z": 25.0,
+      "speed": 0.0,
+      "angle": 0.0,
+      "serving_gnb": "unknown",
+      "sinr_dl": -999,
+      "sinr_ul": -999,
+      "sinr_d2d": -999,
+      "constraints": {
+        "min_x": "0m",
+        "max_x": "1000m",
+        "min_y": "0m",
+        "max_y": "1000m",
+        "min_z": "0m",
+        "max_z": "0m"
+      }
+    },
+    {
+      "id": "ue0",
+      "x": 189.2842952595291,
+      "y": 594.5884856656049,
+      "z": 0.0,
+      "speed": 2.0,
+      "angle": 0.0,
+      "serving_gnb": "nan",
+      "sinr_dl": -999,
+      "sinr_ul": -999,
+      "sinr_d2d": -999,
+      "constraints": {
+        "min_x": "0m",
+        "max_x": "1000m",
+        "min_y": "0m",
+        "max_y": "1000m",
+        "min_z": "0m",
+        "max_z": "0m"
+      }
+    },
+    {
+      "id": "ue1",
+      "x": 370.6797949691645,
+      "y": 656.8718270819381,
+      "z": 0.0,
+      "speed": 2.0,
+      "angle": 0.0,
+      "serving_gnb": "nan",
+      "sinr_dl": -999,
+      "sinr_ul": -999,
+      "sinr_d2d": -999,
+      "constraints": {
+        "min_x": "0m",
+        "max_x": "1000m",
+        "min_y": "0m",
+        "max_y": "1000m",
+        "min_z": "0m",
+        "max_z": "0m"
+      }
+    },
+    {
+      "id": "ue2",
+      "x": 134.77553305176644,
+      "y": 468.7687278741082,
+      "z": 0.0,
+      "speed": 2.0,
+      "angle": 0.0,
+      "serving_gnb": "nan",
+      "sinr_dl": -999,
+      "sinr_ul": -999,
+      "sinr_d2d": -999,
+      "constraints": {
+        "min_x": "0m",
+        "max_x": "1000m",
+        "min_y": "0m",
+        "max_y": "1000m",
+        "min_z": "0m",
+        "max_z": "0m"
+      }
+    },
+    {
+      "id": "ue3",
+      "x": 355.7707193831535,
+      "y": 310.00430208906675,
+      "z": 0.0,
+      "speed": 8.0,
+      "angle": 0.0,
+      "serving_gnb": "nan",
+      "sinr_dl": -999,
+      "sinr_ul": -999,
+      "sinr_d2d": -999,
+      "constraints": {
+        "min_x": "0m",
+        "max_x": "1000m",
+        "min_y": "0m",
+        "max_y": "1000m",
+        "min_z": "0m",
+        "max_z": "0m"
+      }
+    },
+    {
+      "id": "ue4",
+      "x": 355.7707193831535,
+      "y": 310.00430208906675,
+      "z": 0.0,
+      "speed": 8.0,
+      "angle": 0.0,
+      "serving_gnb": "nan",
+      "sinr_dl": -999,
+      "sinr_ul": -999,
+      "sinr_d2d": -999,
+      "constraints": {
+        "min_x": "0m",
+        "max_x": "1000m",
+        "min_y": "0m",
+        "max_y": "1000m",
+        "min_z": "0m",
+        "max_z": "0m"
+      }
+    },
+    {
+      "id": "ue5",
+      "x": 355.7707193831535,
+      "y": 310.00430208906675,
+      "z": 0.0,
+      "speed": 8.0,
+      "angle": 0.0,
+      "serving_gnb": "nan",
+      "sinr_dl": -999,
+      "sinr_ul": -999,
+      "sinr_d2d": -999,
+      "constraints": {
+        "min_x": "0m",
+        "max_x": "1000m",
+        "min_y": "0m",
+        "max_y": "1000m",
+        "min_z": "0m",
+        "max_z": "0m"
+      }
+    },
+    {
+      "id": "ue6",
+      "x": 355.7707193831535,
+      "y": 310.00430208906675,
+      "z": 0.0,
+      "speed": 7.750293183691193,
+      "angle": 0.0,
+      "serving_gnb": "nan",
+      "sinr_dl": -999,
+      "sinr_ul": -999,
+      "sinr_d2d": -999,
+      "constraints": {
+        "min_x": "0m",
+        "max_x": "1000m",
+        "min_y": "0m",
+        "max_y": "1000m",
+        "min_z": "0m",
+        "max_z": "0m"
+      }
+    },
+    {
+      "id": "ue7",
+      "x": 355.7707193831535,
+      "y": 310.00430208906675,
+      "z": 0.0,
+      "speed": 7.750293183691193,
+      "angle": 0.0,
+      "serving_gnb": "nan",
+      "sinr_dl": -999,
+      "sinr_ul": -999,
+      "sinr_d2d": -999,
+      "constraints": {
+        "min_x": "0m",
+        "max_x": "1000m",
+        "min_y": "0m",
+        "max_y": "1000m",
+        "min_z": "0m",
+        "max_z": "0m"
+      }
+    },
+    {
+      "id": "ue8",
+      "x": 355.7707193831535,
+      "y": 310.00430208906675,
+      "z": 0.0,
+      "speed": 7.750293183691193,
+      "angle": 0.0,
+      "serving_gnb": "nan",
+      "sinr_dl": -999,
+      "sinr_ul": -999,
+      "sinr_d2d": -999,
+      "constraints": {
+        "min_x": "0m",
+        "max_x": "1000m",
+        "min_y": "0m",
+        "max_y": "1000m",
+        "min_z": "0m",
+        "max_z": "0m"
+      }
+    },
+    {
+      "id": "ue9",
+      "x": 500.0,
+      "y": 500.0,
+      "z": 0.0,
+      "speed": 0.0,
+      "angle": 0.0,
+      "serving_gnb": "nan",
+      "sinr_dl": -999,
+      "sinr_ul": -999,
+      "sinr_d2d": -999,
+      "constraints": {
+        "min_x": "0m",
+        "max_x": "1000m",
+        "min_y": "0m",
+        "max_y": "1000m",
+        "min_z": "0m",
+        "max_z": "0m"
+      }
+    }
+  ],
+  "flows": [
+    {
+      "type": "nan",
+      "src": "server",
+      "dst": "ue0",
+      "packet_size": 0,
+      "interval": 0,
+      "throughput": 0,
+      "delay": 0,
+      "bler": 0,
+      "packet_loss": 0
+    },
+    {
+      "type": "nan",
+      "src": "server",
+      "dst": "ue1",
+      "packet_size": 0,
+      "interval": 0,
+      "throughput": 0,
+      "delay": 0,
+      "bler": 0,
+      "packet_loss": 0
+    },
+    {
+      "type": "nan",
+      "src": "server",
+      "dst": "ue2",
+      "packet_size": 0,
+      "interval": 0,
+      "throughput": 0,
+      "delay": 0,
+      "bler": 0,
+      "packet_loss": 0
+    },
+    {
+      "type": "nan",
+      "src": "server",
+      "dst": "ue3",
+      "packet_size": 0,
+      "interval": 0,
+      "throughput": 0,
+      "delay": 0,
+      "bler": 0,
+      "packet_loss": 0
+    },
+    {
+      "type": "nan",
+      "src": "server",
+      "dst": "ue4",
+      "packet_size": 0,
+      "interval": 0,
+      "throughput": 0,
+      "delay": 0,
+      "bler": 0,
+      "packet_loss": 0
+    },
+    {
+      "type": "nan",
+      "src": "server",
+      "dst": "ue5",
+      "packet_size": 0,
+      "interval": 0,
+      "throughput": 0,
+      "delay": 0,
+      "bler": 0,
+      "packet_loss": 0
+    },
+    {
+      "type": "nan",
+      "src": "server",
+      "dst": "ue6",
+      "packet_size": 0,
+      "interval": 0,
+      "throughput": 0,
+      "delay": 0,
+      "bler": 0,
+      "packet_loss": 0
+    },
+    {
+      "type": "nan",
+      "src": "server",
+      "dst": "ue7",
+      "packet_size": 0,
+      "interval": 0,
+      "throughput": 0,
+      "delay": 0,
+      "bler": 0,
+      "packet_loss": 0
+    },
+    {
+      "type": "nan",
+      "src": "server",
+      "dst": "ue8",
+      "packet_size": 0,
+      "interval": 0,
+      "throughput": 0,
+      "delay": 0,
+      "bler": 0,
+      "packet_loss": 0
+    },
+    {
+      "type": "nan",
+      "src": "server",
+      "dst": "ue9",
+      "packet_size": 0,
+      "interval": 0,
+      "throughput": 0,
+      "delay": 0,
+      "bler": 0,
+      "packet_loss": 0
+    }
+  ]
+}

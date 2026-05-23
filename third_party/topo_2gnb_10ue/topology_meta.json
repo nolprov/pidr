@@ -1,0 +1,43 @@
+{
+  "topology": {
+    "gnb_count": 2,
+    "ue_count": 10,
+    "area_m": "1000x1000",
+    "gnbs": [
+      {
+        "id": "gnb0",
+        "x": 300,
+        "y": 500,
+        "z": 25
+      },
+      {
+        "id": "gnb1",
+        "x": 700,
+        "y": 500,
+        "z": 25
+      }
+    ]
+  },
+  "pt_params": {
+    "gnb_tx_dbm": 43,
+    "ue_tx_dbm": 23,
+    "gnb_nf_db": 5,
+    "ue_nf_db": 7,
+    "pkt_size_B": 1400,
+    "interval_ms": 10,
+    "load_mbps_per_flow": 1.12
+  },
+  "dt_initial": {
+    "gnb_tx_dbm": 46,
+    "ue_tx_dbm": 23,
+    "gnb_nf_db": 9,
+    "ue_nf_db": 5,
+    "pkt_size_B": 512,
+    "interval_ms": 80,
+    "load_mbps_per_flow": 0.051
+  },
+  "n_snapshots": 500,
+  "dt_s": 0.1,
+  "freq_ghz": 3.5,
+  "bw_mhz": 100
+}

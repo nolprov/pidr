@@ -11,7 +11,6 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/netanim-module.h"
 #include "ns3/applications-module.h"
-#include "json/json.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -19,15 +18,15 @@
 #include <algorithm>
 #include <fstream>
 #include <iomanip>
-#include "ns3/nr-ue-rrc.h" 
+#include "ns3/lte-ue-rrc.h"
 #include "ns3/traffic-control-helper.h"
 #include "ns3/traffic-control-layer.h"
 #include "ns3/ipv4-interface.h"
 #include "ns3/arp-cache.h"
 #include "ns3/eps-bearer.h"
+#include "ns3/epc-ue-nas.h"
+#include "ns3/epc-tft.h"
 #include "ns3/nr-point-to-point-epc-helper.h"
-#include "ns3/nr-eps-bearer.h"
-#include "ns3/nr-epc-tft.h"
 
 using namespace ns3;
 

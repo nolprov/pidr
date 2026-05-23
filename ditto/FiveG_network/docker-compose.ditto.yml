@@ -1,0 +1,132 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    restart: unless-stopped
+    command: mongod --storageEngine wiredTiger --noscripting
+    environment:
+      TZ: Europe/Paris
+
+  policies:
+    image: eclipse/ditto-policies:${DITTO_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    networks:
+      default:
+        aliases:
+          - ditto-cluster
+    environment:
+      TZ: Europe/Paris
+      BIND_HOSTNAME: 0.0.0.0
+      MONGO_DB_HOSTNAME: mongodb
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseContainerSupport -XX:MaxRAMPercentage=60
+        -Dpekko.coordinated-shutdown.exit-jvm=on
+        -Dpekko.cluster.downing-provider-class=
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:7626/alive || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  things:
+    image: eclipse/ditto-things:${DITTO_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      - policies
+    networks:
+      default:
+        aliases:
+          - ditto-cluster
+    environment:
+      TZ: Europe/Paris
+      BIND_HOSTNAME: 0.0.0.0
+      MONGO_DB_HOSTNAME: mongodb
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseContainerSupport -XX:MaxRAMPercentage=60
+        -Dpekko.coordinated-shutdown.exit-jvm=on
+        -Dpekko.cluster.downing-provider-class=
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:7626/alive || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  things-search:
+    image: eclipse/ditto-things-search:${DITTO_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      - policies
+    networks:
+      default:
+        aliases:
+          - ditto-cluster
+    environment:
+      TZ: Europe/Paris
+      BIND_HOSTNAME: 0.0.0.0
+      MONGO_DB_HOSTNAME: mongodb
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseContainerSupport -XX:MaxRAMPercentage=60
+        -Dpekko.coordinated-shutdown.exit-jvm=on
+        -Dpekko.cluster.downing-provider-class=
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:7626/alive || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  connectivity:
+    image: eclipse/ditto-connectivity:${DITTO_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      - policies
+    networks:
+      default:
+        aliases:
+          - ditto-cluster
+    environment:
+      TZ: Europe/Paris
+      BIND_HOSTNAME: 0.0.0.0
+      MONGO_DB_HOSTNAME: mongodb
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseContainerSupport -XX:MaxRAMPercentage=60
+        -Dpekko.coordinated-shutdown.exit-jvm=on
+        -Dpekko.cluster.downing-provider-class=
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:7626/alive || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  gateway:
+    image: eclipse/ditto-gateway:${DITTO_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      - policies
+      - things
+      - things-search
+      - connectivity
+    networks:
+      default:
+        aliases:
+          - ditto-cluster
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Europe/Paris
+      BIND_HOSTNAME: 0.0.0.0
+      ENABLE_PRE_AUTHENTICATION: "true"
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+UseContainerSupport -XX:MaxRAMPercentage=60
+        -Dpekko.coordinated-shutdown.exit-jvm=on
+        -Dpekko.cluster.downing-provider-class=
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:7626/alive || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
